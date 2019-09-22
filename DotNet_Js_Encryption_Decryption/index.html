@@ -1,0 +1,32 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>JavaScript Decryption Test</title>
+</head>
+<body>
+    .NET Core and JavaScript Encryption Decryption Library<br/>(c) by Smart In Media, MIT License<br/>
+<br/>
+<script type="text/javascript" src="encryptionHandler.js"></script>
+<script type="text/javascript">
+
+
+    var ciphertext = getParameterByName('ciphertext'); 
+    var passphrase = getParameterByName('passphrase'); 
+
+    var enc = new 
+
+    function getParameterByName(name, url) {
+        if (!url) url = window.location.href;
+        name = name.replace(/[\[\]]/g, '\\$&');
+        var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+            results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, ' '));
+    }
+</script>
+
+</body>
+</html>
