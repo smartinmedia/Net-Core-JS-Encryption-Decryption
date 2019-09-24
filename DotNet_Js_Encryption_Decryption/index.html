@@ -1,32 +1,43 @@
 ﻿<!DOCTYPE html>
 
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <meta charset="utf-8" />
-    <title>JavaScript Decryption Test</title>
-</head>
-<body>
-    .NET Core and JavaScript Encryption Decryption Library<br/>(c) by Smart In Media, MIT License<br/>
-<br/>
-<script type="text/javascript" src="encryptionHandler.js"></script>
-<script type="text/javascript">
+    <head>
+        <meta charset="utf-8" />
+        <title>JavaScript Decryption Test</title>
+    </head>
+    <body>
+        .NET Core and JavaScript Encryption Decryption Library<br />(c) by Smart In Media, MIT License<br />
+        <br />
+        Let's assume, the JS now received the data from C#:<br />
+        <br />We have: <br />
+        Encrypted data in C# with concatenated base64 strings: uTkXNB+PSTjzwUCJbfAHVHd95YOlcJr38wbF08ZxqNw=:PNGRjWb5tOINneaVVf8+cw==:Aic+gosvLjTrCebzY8l/usTh+kWuE0v1xSWw7apYunI=
+        <br />and the passphrase: This_is_my_password!
+        <br />Please note that the C# side also has a password generator (PasswordGenerator.GenerateRandomPassword(20); for password length of 20 characters, you can define the character set)
+        <br />
+        <br />
+        <strong><span id="output"></span></strong>
+        <script type="text/javascript" src="./crypto-js.min.js"></script>
+        <script type="text/javascript" src="./encryptionHandler.js"></script>
+        <script type="text/javascript">
 
 
-    var ciphertext = getParameterByName('ciphertext'); 
-    var passphrase = getParameterByName('passphrase'); 
+            var encryptedBase64FromCSharp = "uTkXNB+PSTjzwUCJbfAHVHd95YOlcJr38wbF08ZxqNw=:PNGRjWb5tOINneaVVf8+cw==:Aic+gosvLjTrCebzY8l/usTh+kWuE0v1xSWw7apYunI=";
+            var passPhrase = "This_is_my_password!";
 
-    var enc = new 
+            var eH = new encryptionHandler();
+            
 
-    function getParameterByName(name, url) {
-        if (!url) url = window.location.href;
-        name = name.replace(/[\[\]]/g, '\\$&');
-        var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
-            results = regex.exec(url);
-        if (!results) return null;
-        if (!results[2]) return '';
-        return decodeURIComponent(results[2].replace(/\+/g, ' '));
-    }
-</script>
+            var decryptedFromCSharp = eH.decrypt(encryptedBase64FromCSharp, passPhrase);
 
-</body>
+            var span = document.getElementById("output");
+            var outputText = "The decrypted text from C#: " + decryptedFromCSharp;
+            span.innerHTML = outputText;
+            var encryptTextWithJs = eH.encrypt(decryptedFromCSharp, "This_is_my_password!");
+
+            var decryptedTextWithJs = eH.decrypt(encryptTextWithJs, "This_is_my_password!");
+            outputText += "<br>And now this was encrypted and decrypted again with JS: " + decryptedTextWithJs;
+            span.innerHTML = outputText;
+        </script>
+
+    </body>
 </html>

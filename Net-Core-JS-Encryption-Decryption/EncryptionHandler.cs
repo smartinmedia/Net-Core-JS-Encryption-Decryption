@@ -53,8 +53,8 @@ namespace Net_Core_JS_Encryption_Decryption
         {
             // Salt and IV is randomly generated each time, but is preprended to encrypted cipher text
             // so that the same Salt and IV values can be used when decrypting.  
-            var saltStringBytes = GenerateXBytesOfRandomEntropy(32);
-            var ivStringBytes = GenerateXBytesOfRandomEntropy(16);
+            var saltStringBytes = Encoding.UTF8.GetBytes("12345678901234567890123456789012");  //GenerateXBytesOfRandomEntropy(32);
+            var ivStringBytes = Encoding.UTF8.GetBytes("7061737323313233"); GenerateXBytesOfRandomEntropy(16);
             var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
             using (var password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations))
             {
@@ -124,7 +124,7 @@ namespace Net_Core_JS_Encryption_Decryption
             }
         }
 
-        private static byte[] GenerateXBytesOfRandomEntropy(int x)
+        public static byte[] GenerateXBytesOfRandomEntropy(int x)
         {
             var randomBytes = new byte[x]; // 32 Bytes will give us 256 bits.
             using (var rngCsp = new RNGCryptoServiceProvider())
