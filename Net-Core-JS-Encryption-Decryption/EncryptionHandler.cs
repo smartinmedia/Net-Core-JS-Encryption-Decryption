@@ -2,8 +2,18 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
+
+/*
+ * .NET Core to / from JavaScript Encryption / Decryption
+ * (c) by Smart In Media 2019 / Dr. Martin Weihrauch
+ * Under MIT License
+ *
+ *
+ *
+ */
 
 namespace Net_Core_JS_Encryption_Decryption
 {
@@ -16,26 +26,7 @@ namespace Net_Core_JS_Encryption_Decryption
         // This constant determines the number of iterations for the password bytes generation function.
         private const int DerivationIterations = 1000;
 
-        public static string CreateHash(string password)
-        {
-            PasswordHash hash = new PasswordHash(password);
-            return Convert.ToBase64String(hash.ToArray());
-        }
-
-        public static bool CompareHash(string storedBase64Hash, string enteredPassword)
-        {
-
-            byte[] hashBytes = Convert.FromBase64String(storedBase64Hash);
-            PasswordHash hash = new PasswordHash(hashBytes);
-            if (!hash.Verify(enteredPassword))
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-
+        
         /* This method not only returns ciphertext, but also the IV and the SALT, 
            which is important for the deciphering on the JS side. Having the same 
            IV and same SALT as suggested by demos on Stackoverflow, etc, is detrimental
@@ -53,75 +44,44 @@ namespace Net_Core_JS_Encryption_Decryption
         {
             // Salt and IV is randomly generated each time, but is preprended to encrypted cipher text
             // so that the same Salt and IV values can be used when decrypting.  
-            var saltStringBytes = Encoding.UTF8.GetBytes("12345678901234567890123456789012");  //GenerateXBytesOfRandomEntropy(32);
-            var ivStringBytes = Encoding.UTF8.GetBytes("7061737323313233"); GenerateXBytesOfRandomEntropy(16);
-            var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
-            using (var password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations))
-            {
-                var keyBytes = password.GetBytes(Keysize / 8);
-                using (var symmetricKey = new RijndaelManaged())
-                {
-                    symmetricKey.BlockSize = 128;
-                    symmetricKey.Mode = CipherMode.CBC;
-                    symmetricKey.Padding = PaddingMode.PKCS7;
-                    using (var encryptor = symmetricKey.CreateEncryptor(keyBytes, ivStringBytes))
-                    {
-                        using (var memoryStream = new MemoryStream())
-                        {
-                            using (var cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write))
-                            {
-                                cryptoStream.Write(plainTextBytes, 0, plainTextBytes.Length);
-                                cryptoStream.FlushFinalBlock();
-                                // Create the final bytes as a concatenation of the random salt bytes, the random iv bytes and the cipher bytes.
-                                var cipherTextBytes = saltStringBytes;
-                                cipherTextBytes = cipherTextBytes.Concat(ivStringBytes).ToArray();
-                                cipherTextBytes = cipherTextBytes.Concat(memoryStream.ToArray()).ToArray();
-                                memoryStream.Close();
-                                cryptoStream.Close();
-                                return Convert.ToBase64String(cipherTextBytes);
-                            }
-                        }
-                    }
-                }
-            }
+
+            var myRijndael = new RijndaelManaged();
+            myRijndael.BlockSize = 128;
+            myRijndael.KeySize = Keysize;
+            myRijndael.IV = GenerateXBytesOfRandomEntropy(16); //IV must be 16 bytes / 128 bit
+            myRijndael.Padding = PaddingMode.PKCS7;
+            myRijndael.Mode = CipherMode.CBC;
+            var salt = GenerateXBytesOfRandomEntropy(32);
+            Rfc2898DeriveBytes rfc2898 = new Rfc2898DeriveBytes(System.Text.Encoding.UTF8.GetBytes(passPhrase), salt,
+                DerivationIterations);
+            myRijndael.Key = rfc2898.GetBytes(Keysize / 8);
+            byte[] utf8Text = new System.Text.UTF8Encoding().GetBytes(plainText);
+            ICryptoTransform transform = myRijndael.CreateEncryptor();
+            byte[] cipherText = transform.TransformFinalBlock(utf8Text, 0, utf8Text.Length);
+            var cipherWithSaltAndIv = Convert.ToBase64String(salt) + ":" + Convert.ToBase64String(myRijndael.IV) + ":" +
+                                      Convert.ToBase64String(cipherText);
+            
+            return cipherWithSaltAndIv;
         }
 
-        public static string Decrypt(string cipherText, string passPhrase)
+        public static string Decrypt(string encryptedData, string passPhrase)
         {
-            // Get the complete stream of bytes that represent:
-            // [32 bytes of Salt] + [16 bytes of IV] + [n bytes of CipherText]
-            var cipherTextBytesWithSaltAndIv = Convert.FromBase64String(cipherText);
-            // Get the saltbytes by extracting the first 32 bytes from the supplied cipherText bytes.
-            var saltStringBytes = cipherTextBytesWithSaltAndIv.Take(32).ToArray();
-            // Get the IV bytes by extracting the next 32 bytes from the supplied cipherText bytes.
-            var ivStringBytes = cipherTextBytesWithSaltAndIv.Skip(32).Take(16).ToArray();
-            // Get the actual cipher text bytes by removing the first 64 bytes from the cipherText string.
-            var cipherTextBytes = cipherTextBytesWithSaltAndIv.Skip(32 + 16).Take(cipherTextBytesWithSaltAndIv.Length - (32 + 16)).ToArray();
-
-            using (var password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations))
-            {
-                var keyBytes = password.GetBytes(Keysize / 8);
-                using (var symmetricKey = new RijndaelManaged())
-                {
-                    symmetricKey.BlockSize = 128;
-                    symmetricKey.Mode = CipherMode.CBC;
-                    symmetricKey.Padding = PaddingMode.PKCS7;
-                    using (var decryptor = symmetricKey.CreateDecryptor(keyBytes, ivStringBytes))
-                    {
-                        using (var memoryStream = new MemoryStream(cipherTextBytes))
-                        {
-                            using (var cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read))
-                            {
-                                var plainTextBytes = new byte[cipherTextBytes.Length];
-                                var decryptedByteCount = cryptoStream.Read(plainTextBytes, 0, plainTextBytes.Length);
-                                memoryStream.Close();
-                                cryptoStream.Close();
-                                return Encoding.UTF8.GetString(plainTextBytes, 0, decryptedByteCount);
-                            }
-                        }
-                    }
-                }
-            }
+            string[] parts = encryptedData.Split(":");
+            var myRijndael = new RijndaelManaged();
+            myRijndael.BlockSize = 128;
+            myRijndael.KeySize = Keysize;
+            myRijndael.IV = Convert.FromBase64String(parts[1]);//Encoding.UTF8.GetBytes("1234567890123456");
+            myRijndael.Padding = PaddingMode.PKCS7;
+            myRijndael.Mode = CipherMode.CBC;
+            var salt = Convert.FromBase64String(parts[0]);//  Encoding.UTF8.GetBytes("12345678901234567890123456789012"); //GenerateXBytesOfRandomEntropy(32);
+            Rfc2898DeriveBytes rfc2898 = new Rfc2898DeriveBytes(System.Text.Encoding.UTF8.GetBytes(passPhrase), salt,
+                DerivationIterations);
+            myRijndael.Key = rfc2898.GetBytes(Keysize / 8);
+            var encryptedBytes = Convert.FromBase64String(parts[2]);
+            ICryptoTransform transform = myRijndael.CreateDecryptor();
+            byte[] cipherText = transform.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
+            return System.Text.Encoding.UTF8.GetString(cipherText);
+           
         }
 
         public static byte[] GenerateXBytesOfRandomEntropy(int x)
@@ -134,5 +94,6 @@ namespace Net_Core_JS_Encryption_Decryption
             }
             return randomBytes;
         }
+
     }
 }

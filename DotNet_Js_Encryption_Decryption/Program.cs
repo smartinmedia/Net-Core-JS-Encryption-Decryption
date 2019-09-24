@@ -5,6 +5,14 @@ using Net_Core_JS_Encryption_Decryption;
 
 namespace DotNet_Js_Encryption_Decryption
 {
+/*
+ * .NET Core to / from JavaScript Encryption / Decryption
+ * (c) by Smart In Media 2019 / Dr. Martin Weihrauch
+ * Under MIT License
+ *
+ *
+ *
+ */
     class Program
     {
         static void Main(string[] args)
@@ -16,36 +24,15 @@ namespace DotNet_Js_Encryption_Decryption
             string passPhrase = PasswordGenerator.GenerateRandomPassword(20);
             passPhrase = "This_is_my_password!";
 
-            var enc = EncryptionHandler3.Encrypt(plainText, passPhrase);
-            Console.WriteLine("Encrypted text from DEC3: " + enc);
+            var enc = EncryptionHandler.Encrypt(plainText, passPhrase);
+            Console.WriteLine("Encrypted text 'This is my secret text' with password 'This_is_my_password!': " + enc);
 
-            var dec3 = EncryptionHandler3.Decrypt(enc, passPhrase);
-            Console.WriteLine("THIS IS FROM DEC3: " + dec3);
-
-
-            /*
-            var dec = EncryptionHandler2.DecryptStringAES();
-            
-            Console.WriteLine("RESULT: " + dec);
+            var dec3 = EncryptionHandler.Decrypt(enc, passPhrase);
+            Console.WriteLine("And decrypting again: " + dec3);
+            Console.WriteLine("Please start the index.html to see the same in Javascript. Encryption / Decryption run in both ways and can be interchanged between C# and JS!");
 
 
-            string encryptedData = EncryptionHandler.Encrypt(plainText, passPhrase);
 
-            Console.WriteLine(".NET Core and JavaScript Encryption Decryption Library\r\n(c) by Smart In Media, MIT License"
-            + "\r\n\r\nThe plaintext: " + plainText + "\r\nThe passphrase: " + passPhrase 
-            + "\r\n\r\nThe resulting ciphertext in base64: " + encryptedData);
-
-            string decryptedCipher = EncryptionHandler.Decrypt(encryptedData, passPhrase);
-
-            Console.WriteLine("\r\n\r\nNow let's decrypt this with C#:\r\n\r\nDecrypted plaintext: " + decryptedCipher);
-
-            Console.WriteLine("\r\n\r\n------------------------------\r\nNow, press a key to start the browser and see if JavaScript can decrypt this! Else, just run the index.html provided with this example. It contains the JS!");
-            Console.ReadKey();
-
-
-            // Start a browser and see if it can be decrypted with JS
-            var proc = Process.Start(@"cmd.exe ", @"/c index.html");
-*/
         }
     }
 }
