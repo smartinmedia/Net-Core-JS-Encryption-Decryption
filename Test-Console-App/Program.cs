@@ -25,7 +25,7 @@ namespace DotNet_Js_Encryption_Decryption
             passPhrase = "This_is_my_password!";
 
             var enc = EncryptionHandler.Encrypt(plainText, passPhrase);
-            Console.WriteLine("Encrypted text 'This is my secret text' with password 'This_is_my_password!': " + enc);
+            Console.WriteLine("Plaintext: 'This is my secret text' with password 'This_is_my_password!' results in ciphertext: " + enc);
 
             var dec3 = EncryptionHandler.Decrypt(enc, passPhrase);
             Console.WriteLine("And decrypting again: " + dec3);

@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29306.81
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNet_Js_Encryption_Decryption-Console", "DotNet_Js_Encryption_Decryption-Console.csproj", "{30380082-55B2-4369-8D8B-511C941AAB87}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test-Console-App", "Test-Console-App.csproj", "{30380082-55B2-4369-8D8B-511C941AAB87}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Net-Core-JS-Encryption-Decryption", "..\Net-Core-JS-Encryption-Decryption\Net-Core-JS-Encryption-Decryption.csproj", "{62D6E636-E370-46CF-AFCE-8492EBF52283}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Net-Core-JS-Encryption-Decryption", "..\Net-Core-JS-Encryption-Decryption\Net-Core-JS-Encryption-Decryption.csproj", "{62D6E636-E370-46CF-AFCE-8492EBF52283}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
