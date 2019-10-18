@@ -59,6 +59,7 @@
             encryptedText;
         return cipherWithSaltAndIv;
     }
+
 }
 
 

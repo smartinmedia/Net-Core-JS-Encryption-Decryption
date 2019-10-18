@@ -16,10 +16,11 @@
         <br />
         <br />
         <strong><span id="output"></span></strong>
-        <script type="text/javascript" src="./crypto-js.min.js"></script>
+        <script type="text/javascript" src="../crypto-js.min.js"></script>
         <script type="text/javascript" src="./encryptionHandler.js"></script>
         <script type="text/javascript">
 
+            // Test AES
 
             var encryptedBase64FromCSharp = "uTkXNB+PSTjzwUCJbfAHVHd95YOlcJr38wbF08ZxqNw=:PNGRjWb5tOINneaVVf8+cw==:Aic+gosvLjTrCebzY8l/usTh+kWuE0v1xSWw7apYunI=";
             var passPhrase = "This_is_my_password!";
@@ -37,6 +38,53 @@
             var decryptedTextWithJs = eH.decrypt(encryptTextWithJs, "This_is_my_password!");
             outputText += "<br>And now this was encrypted and decrypted again with JS: " + decryptedTextWithJs;
             span.innerHTML = outputText;
+
+            // Test Scrypt
+            outputText += "<br><br>Testing Scrypt<br> with password = 'This_is_my_password!', Salt = '1', N = ";
+
+
+
+            var t0 = (new Date()).getTime();
+            scrypt(password, salt, N = 16384, r = 8, p = 1, dkLen = 32, function(error, progress, key) {
+
+                if (error) {
+                    outputText += "Cancelled: " + parseInt(100 * progress) + "% done";
+
+                } else if (key) {
+                    key = new buffer.SlowBuffer(key);
+
+                    var keyString = ":s2:" + N.toString() + ":" + r.toString() + ":" + p.toString() + ":" + btoa(salt.toString());
+                    keyString += ":" + btoa(key);
+                    
+
+                    outputText += "<br>The output of Scrypt is: " + keyString;
+
+
+                    console.log("<br>Generated: " + key.toString('hex'));
+                    outputText += "<br>Complete: " + (((new Date()).getTime() - t0) / 1000) + ' seconds';
+                    span.innerHTML = outputText;
+
+                }
+
+                if (error || key) {
+                    
+                } else if (done) {
+
+
+                    return true;
+                }
+
+                get('progressBar').style.width = parseInt(100 * progress) + '%';
+                get('progressAmount').innerHTML = parseInt(100 * progress) + '%';
+            });
+
+        } else if (done === false) {
+            done = true;
+        }
+    };
+
+
+
         </script>
 
     </body>

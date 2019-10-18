@@ -5,21 +5,21 @@ using System.Text;
 
 namespace Net_Core_JS_Encryption_Decryption
 {
-    public sealed class PasswordHash
+    public sealed class CommonPasswordHashing
     {
         const int SaltSize = 16, HashSize = 20, HashIter = 10000;
         readonly byte[] _salt, _hash;
-        public PasswordHash(string password)
+        public CommonPasswordHashing(string password)
         {
             new RNGCryptoServiceProvider().GetBytes(_salt = new byte[SaltSize]);
             _hash = new Rfc2898DeriveBytes(password, _salt, HashIter).GetBytes(HashSize);
         }
-        public PasswordHash(byte[] hashBytes)
+        public CommonPasswordHashing(byte[] hashBytes)
         {
             Array.Copy(hashBytes, 0, _salt = new byte[SaltSize], 0, SaltSize);
             Array.Copy(hashBytes, SaltSize, _hash = new byte[HashSize], 0, HashSize);
         }
-        public PasswordHash(byte[] salt, byte[] hash)
+        public CommonPasswordHashing(byte[] salt, byte[] hash)
         {
             Array.Copy(salt, 0, _salt = new byte[SaltSize], 0, SaltSize);
             Array.Copy(hash, 0, _hash = new byte[HashSize], 0, HashSize);

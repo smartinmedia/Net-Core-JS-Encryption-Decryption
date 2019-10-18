@@ -5,11 +5,22 @@
     <RootNamespace>Net_Core_JS_Encryption_Decryption</RootNamespace>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+
   <ItemGroup>
-    <None Update="crypto-js.min.js">
+    <PackageReference Include="CryptSharpOfficial" Version="2.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="index.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="encryptionHandler.js">
+    <None Update="js\ExternalJs\crypto-js.min.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="js\encryptionHandler.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
