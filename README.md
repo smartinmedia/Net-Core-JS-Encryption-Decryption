@@ -1,7 +1,7 @@
-# Encryption/Decryption JS/C# - Encrypt and decrypt between .NET Core and JavaScript
+# Encryption/Decryption JS/C# - Encrypt, decrypt and securely hash with Scrypt between .NET Core and JavaScript
 
 ## Edward Snowden writes...
-*"Encryption is the single best hope for fighting surveillance of any kind. If all our data, including our communications, were enciphered in this fashion, from end to end…then no government—no entity conceivable under our current knowledge of physics, for that matter—would be able to understand them."*
+*"Encryption is the single best hope for fighting surveillance of any kind. If all our data, including our communications, were enciphered in this fashion, from end to end…then no government - no entity conceivable under our current knowledge of physics, for that matter - would be able to understand them."*
 
 ## About us
 We are a company (Smart In Media GmbH & Co. KG, https://www.smartinmedia.com) and believe in the importance of open source, thus we donate this piece to the community!
@@ -13,6 +13,9 @@ server being ignorant to the password (to protect patient data). Can't be too di
 C# and JS and then encrypt decrypt in any direction, right? Unfortunately not. I found out that the difficulties lie in the preparation of the key, 
 the "Salt", the "IV", the iterations, etc. Do you get it? Exactly, me neither. Now, I figured everything out for you and will explain it step by step,
 so everyone gets peace of mind :)
+
+Also, I learnt: hashing the user password is of course important before storing it in the database, so that attackers cannot harvest user passwords. However, 
+it is really important to minimize the risk of dictionary attacks. Scrypt is one of the later hashing technologies and adds complexity by adapting to hardware (and making it harder to be broken by GPUs).
 
 ## What's the functionality?
 
@@ -39,20 +42,28 @@ This library implemented random SALT and random IV (initialization vectors) for 
 which use a static SALT and IV.
 Now, what are SALT and IV? I am sure, you have read about SALT before, because user passwords should always be stored "salted" in databases. 
 
-A SALT in AES is comparable. It is mixed with the user password and run through e. g. 1,000 hash-processes ("iterations"). These iterations are
-very time consuming. This results that an attacker cannot effectively create a dictionary (or brute force) attack, because he would have to 
-SALT millions of passwords, each with 1,000 iterations, which would take forever. <br/>
+A SALT in AES is comparable. It is mixed with the user password and run through e. g. 10,000 hash-processes ("iterations"). These iterations are
+time consuming. This results that an attacker cannot effectively create a dictionary (or brute force) attack, because he would have to 
+create a dictionary for each individually salted password, each with 10,000 iterations, which would take a long time. <br/>
+<br/><br/>Recently however, the advent of powerful GPUs, which can do many calculations simultaneously, lowered the power of the iterations as they can 
+be calculated very fast simultaneously. To make it even more difficult for attackers, *the hashing method "Scrypt"* was invented. This 
+takes more memory and makes it less infeasable for attackers. E. g., if you set the settings of Scrypt (default values) to "cost" (N) to 16384, block size to 8 and parallel to 1,
+then it takes appr. 1 second to calculate the hash - either in C# and in JS. 
+So, with a dictionary attack, each iteration through the passwords would take 1 second per tested password. Let's assume, a user picks a password with a length of 
+8 characters. The attacker knows that the user only uses 8 characters of A-Z, a-z, 0-9 and - and _ --> 64 different characters. So, we'd have 64^8 possibilities (281 trillion).
+281 trillion seconds / 60 / 60 / 24 = 3 billion days or 8 million years to run through all (and 4 million years to run through 50% of the) passwords. 
 Another great advantage is that with the same password (but different SALT), the ciphertext is always different. Thus, if I encrypt the exact same 
 text as you do, it cannot happen that the result is the same and I then know, that you used the same password.
-
-IV is pretty similar. It is added to the plaintext. This means, even if you don't salt a password, because of the IV, every encryption of the same plaintext results in a 
+<br/><br/>
+IV is pretty similar to a SALT. It is added to the plaintext. This means, even if you don't salt a password, because of the IV, every encryption of the same plaintext results in a 
 different ciphertext, so it is harder for attackers.<br/>
 This library creates random SALT and random IV for each encryption. SALT and IV are appended to the ciphertext and may be transmitted and communicated in the open.
 Again, SALT and IV cannot (and don't have to) be hidden from the attacker. They are of no use to him, but are needed to decrypt.
 
 ## Get started here!
 
-Let's see how we can encrypt / decrypt in C#
+Let's see how we can encrypt / decrypt in C# and how to hash with Scrypt.
+For hashing, you also have a function to compare a password with the hash. The hash contains all the settings of N, p, r, etc of Scrypt, so you don't need to worry about that.'
 
 ```csharp
 	//Encrypt plain text in C# with a random password
@@ -69,10 +80,45 @@ Let's see how we can encrypt / decrypt in C#
     Console.WriteLine("And decrypting again: " + dec3);
     Console.WriteLine("Please start the index.html to see the same in Javascript. Encryption / Decryption run in both ways and can be interchanged between C# and JS!");
 
+	/*
+             * Testing Scrypt 
+             * The recommended parameters for interactive logins as of 2009 are
+             * iterationCount=16384, blockSize=8, threadCount=1, those are the default values.
+             * They should be increased as memory latency and CPU parallelism increases.
+             */
+
+            Stopwatch stopWatch = new Stopwatch();
+            stopWatch.Start();
+            
+            // NOW RUNNING SCRYPT
+            string hashString = ScryptHandler.Hash(passPhrase, "This_is_my_SALT!", 16384);
+            stopWatch.Stop();
+
+            Console.WriteLine("\r\nTesting Scrypt with the password 'This_is_my_password!': " + hashString);
+            bool compare = ScryptHandler.ComparePasswordWithHash("This_is_my_password!", hashString);
+            if (compare)
+            {
+                Console.WriteLine("The password matches with the stored hash!");
+            }
+            else
+            {
+                Console.WriteLine("The password does not match with the stored hash!");
+            }
+            
+            // Get the elapsed time as a TimeSpan value.
+            TimeSpan ts = stopWatch.Elapsed;
+
+            // Format and display the TimeSpan value.
+            string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
+                ts.Hours, ts.Minutes, ts.Seconds,
+                ts.Milliseconds / 10);
+            Console.WriteLine("Time elapsed in HH:MM:SS (only for creating the hash, not checking): " + elapsedTime);
+        }
 ```
 
 
-Now let's have a look at the Javascript part of encryption / decryption (have a look at the index.html)
+Now let's have a look at the Javascript part of encryption / decryption (have a look at the index.html) and usage of the Scrypt hashing of passwords.
+As with C#, we also have a function to compare a password to the hash.
 
 ```javascript
 	// This is the ciphertext, which was encrypted by C# to check the interchangeability:
@@ -87,6 +133,50 @@ Now let's have a look at the Javascript part of encryption / decryption (have a 
     var encryptTextWithJs = eH.encrypt(decryptedFromCSharp, "This_is_my_password!");
 	//And decrypt again with JS
     var decryptedTextWithJs = eH.decrypt(encryptTextWithJs, "This_is_my_password!");
+
+	//
+            // Test Scrypt
+            //
+            var outputText2 = "<br><br>Testing Scrypt<br> with password = 'This_is_my_password!' and salt = 'This_is_my_SALT!'";
+            var password = "This_is_my_password!";
+            var salt = "This_is_my_SALT!";
+            var t0 = (new Date()).getTime(); //To measure time!
+            /*
+             You can add any of these options
+            var options = 
+                {
+                      "salt": string, //(can be empty or null, then string is automatically created)
+                      "cost": int, //(the "N" of scrypt, default is 16384)
+                      "blockSize": int, // (the "r", default is 8)
+                      "parallel": int, // (the "p", default is 1)
+                      "derivedKeyLength": int // (default is 32)
+                }
+            */
+            var options = { "salt": salt };
+            var callback = function(error, progress, key) {
+                if (error) {
+                    outputText2 += "There was an error: " + error;
+                }
+                else if (key) {
+                    outputText2 += "<br/>The key string for password " + password +" is: " + key;
+                    outputText2 += "<br/>It is compatible with C# as long as you leave maxThreads in C# at null";
+                    outputText2 += "<br>Execution time: " + (((new Date()).getTime() - t0) / 1000) + ' seconds';
+                    var spanScrypt = document.getElementById("outputScrypt");
+                    spanScrypt.innerHTML = outputText2;
+
+                }
+
+                else if (progress) {
+                    var spanProgress = document.getElementById("progress");
+
+                    spanProgress.innerHTML = (((progress * 100).toFixed()).toString() + "%");
+                }
+                
+            }
+
+            var sH = new scryptHandler();
+            sH.Hash(password, options, callback);
+
 ```
 
 
