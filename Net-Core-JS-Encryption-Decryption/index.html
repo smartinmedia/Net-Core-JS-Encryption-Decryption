@@ -83,6 +83,8 @@
                       "derivedKeyLength": int // (default is 32)
                 }
             */
+            var sH = new scryptHandler();
+
             var options = { "salt": salt };
             var callback = function(error, progress, key) {
                 if (error) {
@@ -94,6 +96,22 @@
                     outputText2 += "<br>Execution time: " + (((new Date()).getTime() - t0) / 1000) + ' seconds';
                     var spanScrypt = document.getElementById("outputScrypt");
                     spanScrypt.innerHTML = outputText2;
+                    sH.comparePasswordWithHash(password,
+                        key,
+                        function(isTheSame) {
+                            if (isTheSame) {
+
+                                var spanScrypt = document.getElementById("outputScrypt");
+                                spanScrypt.innerHTML =
+                                    spanScrypt.innerHTML + "<br/>Checking the password vs hash: matches!";
+
+                            } else {
+                                var spanScrypt = document.getElementById("outputScrypt");
+                                spanScrypt.innerHTML =
+                                    spanScrypt.innerHTML + "<br/>Checking the password vs hash: does not match!";
+
+                            }
+                        });
 
                 }
 
@@ -105,8 +123,12 @@
                 
             }
 
-            var sH = new scryptHandler();
             sH.Hash(password, options, callback);
+
+            //now testing the PW
+            function testHash(password, hashString, callback) {
+
+            }
 
 
         </script>

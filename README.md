@@ -46,7 +46,7 @@ A SALT in AES is comparable. It is mixed with the user password and run through 
 time consuming. This results that an attacker cannot effectively create a dictionary (or brute force) attack, because he would have to 
 create a dictionary for each individually salted password, each with 10,000 iterations, which would take a long time. <br/>
 <br/><br/>Recently however, the advent of powerful GPUs, which can do many calculations simultaneously, lowered the power of the iterations as they can 
-be calculated very fast simultaneously. To make it even more difficult for attackers, *the hashing method "Scrypt"* was invented. This 
+be calculated very fast simultaneously. To make it even more difficult for attackers, **the hashing method "Scrypt"** was invented. This 
 takes more memory and makes it less infeasable for attackers. E. g., if you set the settings of Scrypt (default values) to "cost" (N) to 16384, block size to 8 and parallel to 1,
 then it takes appr. 1 second to calculate the hash - either in C# and in JS. 
 So, with a dictionary attack, each iteration through the passwords would take 1 second per tested password. Let's assume, a user picks a password with a length of 
@@ -118,7 +118,15 @@ For hashing, you also have a function to compare a password with the hash. The h
 
 
 Now let's have a look at the Javascript part of encryption / decryption (have a look at the index.html) and usage of the Scrypt hashing of passwords.
-As with C#, we also have a function to compare a password to the hash.
+The encryption / decryption is synchronous and pretty straight forward. The Scrypt part is a little bit more tricky. It's asynchronous, so you have to provide
+a callback function with (error, progress, key). The progress is between 0 and 1. Check for "key" (that's our hash) to get the final key string containing
+also the salt and all the parameters. So, e. g. if(key){//Here is everything, when the Scrypt hash is ready}.
+As with C#, we also have a function to compare a password to the hash. So, when a user logs in and sends the password, you can compare
+the password against the hash/key. The comparison may look a little bit confusing. This time, the callback function, which you 
+send has to just check for "true" or "false".
+Have a look at the "index.html". There is the entire test. You only need to include: 
+<br/>
+crypto-js.min.js, scrypt.min.js, encryptionHandler.js and scryptHandler.js with your code.
 
 ```javascript
 	// This is the ciphertext, which was encrypted by C# to check the interchangeability:
@@ -152,6 +160,8 @@ As with C#, we also have a function to compare a password to the hash.
                       "derivedKeyLength": int // (default is 32)
                 }
             */
+            var sH = new scryptHandler();
+
             var options = { "salt": salt };
             var callback = function(error, progress, key) {
                 if (error) {
@@ -163,6 +173,22 @@ As with C#, we also have a function to compare a password to the hash.
                     outputText2 += "<br>Execution time: " + (((new Date()).getTime() - t0) / 1000) + ' seconds';
                     var spanScrypt = document.getElementById("outputScrypt");
                     spanScrypt.innerHTML = outputText2;
+                    sH.comparePasswordWithHash(password,
+                        key,
+                        function(isTheSame) {
+                            if (isTheSame) {
+
+                                var spanScrypt = document.getElementById("outputScrypt");
+                                spanScrypt.innerHTML =
+                                    spanScrypt.innerHTML + "<br/>Checking the password vs hash: matches!";
+
+                            } else {
+                                var spanScrypt = document.getElementById("outputScrypt");
+                                spanScrypt.innerHTML =
+                                    spanScrypt.innerHTML + "<br/>Checking the password vs hash: does not match!";
+
+                            }
+                        });
 
                 }
 
@@ -174,8 +200,12 @@ As with C#, we also have a function to compare a password to the hash.
                 
             }
 
-            var sH = new scryptHandler();
             sH.Hash(password, options, callback);
+
+            //now testing the PW
+            function testHash(password, hashString, callback) {
+
+            }
 
 ```
 
