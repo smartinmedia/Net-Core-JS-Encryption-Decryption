@@ -45,19 +45,13 @@ This library implemented random SALT and random IV (initialization vectors) for 
 which use a static SALT and IV.
 Now, what are SALT and IV? I am sure, you have read about SALT before, because user passwords should always be stored "salted" in databases. 
 
-A SALT in AES is comparable. It is mixed with the user password and run through e. g. 10,000 hash-processes ("iterations"). These iterations are
-time consuming. This results that an attacker cannot effectively create a dictionary (or brute force) attack, because he would have to 
-create a dictionary for each individually salted password, each with 10,000 iterations, which would take a long time. <br/>
-
 <br/><br/>
 **MORE ABOUT HASHING AND SALTING**
 What is that hashing about anyway?<br/>
 Let's assume, you have a database on your webserver, which stores user passwords. Then it is paramount to NOT store plaintext passwords in the database! Even renowned companies have screwed up this one badly!! E. g. Adobe, 500px, Dropbox have done a shitty job of storing user passwords, some of them (500px) with only MD5 security. Have a look at: https://haveibeenpwned.com/<br/>
-So, a hash is the result of mathmatical "one-way functions". These are functions, where you can e. g. calculate a hash from the password, but you cannot "decrcypt" the hash to the password. If the attacker knows, which hashing algorithm was used (and hiding it is not a good protection), he can just take a dictionary, hash all words and compare them with the hacked password hashes to find out the user's password. So, to make live harder for the attacker, passwords of different users are hashed with different "SALTs". A SALT is just some random string/bytes, which are combined with the password. Then, the attacker would have to create a hashtable of the dictionary for each user individually. That makes a lot more work.
-Recently however, the advent of powerful GPUs, which can do many calculations simultaneously, lowered the power of the iterations as they can 
-be calculated very fast simultaneously. To make it even more difficult for attackers, **the hashing method "Scrypt"** was invented. This 
-takes more memory and makes it less infeasable for attackers. E. g., if you set the settings of Scrypt (default values) to "cost" (N) to 16384, block size to 8 and parallel to 1,
-then it takes appr. 1 second to calculate the hash - either in C# and in JS. 
+So, a hash is the result of mathmatical "one-way functions". These are functions, where you can e. g. calculate a hash from the password, but you cannot "decrcypt" the hash to the password. If the attacker knows, which hashing algorithm was used (and hiding it is not a good protection), he can just take a dictionary, hash all words and compare them with the hacked password hashes to find out the user's password. So, to make live harder for the attacker, passwords of different users are hashed with different "SALTs". A SALT is just some random string/bytes, which are combined with the password. Then, the attacker would have to create a hashtable of the dictionary for each user individually. This makes cracking passwords harder. However, imagine, there is a celebrity among the users and the attacker just wants to focus on this one person. Then, creating a dictionary attack (salted) is not such a bad idea. One trick is to perform the hashing a lot of times, e. g. 10,000 times. This is time consuming and for each password try, it may take a fraction of a second. But, by the advent of powerful GPUs (like Nvidia), which can do many calculations simultaneously, the trick of performing e. g. 10,000x SHA1 was weakened. To counter this, **the hashing method "Scrypt"** was invented. Scrypt just 
+takes more memory and makes it less infeasable for GPUs and attackers. E. g., if you set the settings of Scrypt (default values) to "cost" (N) to 16384, block size to 8 and parallel to 1,
+then it takes appr. 1 second to calculate the hash - either in C# and in JS on an i7 processor with 12 GB RAM. 
 So, with a dictionary attack, each iteration through the passwords would take 1 second per tested password. Let's assume, a user picks a password with a length of 
 8 characters. The attacker knows that the user only uses 8 characters of A-Z, a-z, 0-9 and - and _ --> 64 different characters. So, we'd have 64^8 possibilities (281 trillion).
 281 trillion seconds / 60 / 60 / 24 = 3 billion days or 8 million years to run through all (and 4 million years to run through 50% of the) passwords. 
