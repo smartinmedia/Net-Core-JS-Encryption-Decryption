@@ -1,7 +1,7 @@
 # Encryption/Decryption JS/C# - Encrypt, decrypt and securely hash with Scrypt between .NET Core and JavaScript
 
 ## Edward Snowden writes...
-*"Encryption is the single best hope for fighting surveillance of any kind. If all our data, including our communications, were enciphered in this fashion, from end to end…then no government - no entity conceivable under our current knowledge of physics, for that matter - would be able to understand them."*
+*"Encryption is the single best hope for fighting surveillance of any kind. If all our data, including our communications, were enciphered in this fashion, from end to endâ€¦then no government - no entity conceivable under our current knowledge of physics, for that matter - would be able to understand them."*
 
 ## About us
 We are a company (Smart In Media GmbH & Co. KG, https://www.smartinmedia.com) and believe in the importance of open source, thus we donate this piece to the community!
@@ -30,6 +30,9 @@ Of note:<br/>
 **Plaintext:** The text to be encrypted<br/>
 **Passphrase:** The password/key<br/>
 **Ciphertext:** The encrypted message/text<br/>
+**Hash(ing):** If you store your user's passwords somewhere, you have to hash them!
+
+**ENCRYPTION/DECRYPTION WITH AES**
 First of all, the AES (advanced encryption standard) algorithm used here is safe against attacks. It is currently unbreakable and even the NSA, 
 CIA, KGB won't be able to crack it. 
 Having said that, it is important to be aware that even the best encryption can be compromised by a lot of factors: wrong implementation, weak passwords,
@@ -45,7 +48,13 @@ Now, what are SALT and IV? I am sure, you have read about SALT before, because u
 A SALT in AES is comparable. It is mixed with the user password and run through e. g. 10,000 hash-processes ("iterations"). These iterations are
 time consuming. This results that an attacker cannot effectively create a dictionary (or brute force) attack, because he would have to 
 create a dictionary for each individually salted password, each with 10,000 iterations, which would take a long time. <br/>
-<br/><br/>Recently however, the advent of powerful GPUs, which can do many calculations simultaneously, lowered the power of the iterations as they can 
+
+<br/><br/>
+**MORE ABOUT HASHING AND SALTING**
+What is that hashing about anyway?<br/>
+Let's assume, you have a database on your webserver, which stores user passwords. Then it is paramount to NOT store plaintext passwords in the database! Even renowned companies have screwed up this one badly!! E. g. Adobe, 500px, Dropbox have done a shitty job of storing user passwords, some of them (500px) with only MD5 security. Have a look at: https://haveibeenpwned.com/<br/>
+So, a hash is the result of mathmatical "one-way functions". These are functions, where you can e. g. calculate a hash from the password, but you cannot "decrcypt" the hash to the password. If the attacker knows, which hashing algorithm was used (and hiding it is not a good protection), he can just take a dictionary, hash all words and compare them with the hacked password hashes to find out the user's password. So, to make live harder for the attacker, passwords of different users are hashed with different "SALTs". A SALT is just some random string/bytes, which are combined with the password. Then, the attacker would have to create a hashtable of the dictionary for each user individually. That makes a lot more work.
+Recently however, the advent of powerful GPUs, which can do many calculations simultaneously, lowered the power of the iterations as they can 
 be calculated very fast simultaneously. To make it even more difficult for attackers, **the hashing method "Scrypt"** was invented. This 
 takes more memory and makes it less infeasable for attackers. E. g., if you set the settings of Scrypt (default values) to "cost" (N) to 16384, block size to 8 and parallel to 1,
 then it takes appr. 1 second to calculate the hash - either in C# and in JS. 
