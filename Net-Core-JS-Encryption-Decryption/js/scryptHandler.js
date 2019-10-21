@@ -19,8 +19,11 @@ function scryptHandler() {
 
     var that = this;
 
-    this.Hash = function(password, options, callback)
-    {
+    this.Hash = function(password, options, callback) {
+        var asyncFunc = true;
+        if (callback == null) {
+            asyncFunc = false;
+        }
         if (options == null) {
             options = {
                 "salt": CryptoJS.enc.Base64.stringify(CryptoJS.lib.WordArray.random(32)), //(can be empty or null, then string is automatically created)
@@ -41,60 +44,102 @@ function scryptHandler() {
         var passwordBuffer = new buffer.SlowBuffer(password.normalize('NFKC'), 'utf8');
         var saltBuffer = new buffer.SlowBuffer(options.salt.normalize('NFKC'), 'utf8');
 
-        scrypt(passwordBuffer,
-            saltBuffer,
-            options.cost,
-            options.blockSize,
-            options.parallel,
-            options.derivedKeyLength,
-            function (error, progress, key) {
+        if (!asyncFunc) {
+            var synchKey = scrypt(passwordBuffer,
+                saltBuffer,
+                options.cost,
+                options.blockSize,
+                options.parallel,
+                options.derivedKeyLength,
+                asyncFunc);
 
-                if (error) {
-                    callback(error);
-                    //outputText += "Cancelled: " + parseInt(100 * progress) + "% done";
+            synchKey = new buffer.SlowBuffer(synchKey);
 
-                } else if (key) {
-                    key = new buffer.SlowBuffer(key);
+            var keyString = "scrypt2:" +
+                options.cost.toString() +
+                ":" +
+                options.blockSize.toString() +
+                ":" +
+                options.parallel.toString() +
+                ":" +
+                + "0" //to mimic C# "maxThreads = null - here, a "0" is correct
+                + ":"
+                + options.derivedKeyLength
+                + ":"
+                + saltBuffer.toString('hex')
+                + ":"
+                + synchKey.toString('hex');
+            return keyString;
 
-                    var keyString = "scrypt2:" +
-                        options.cost.toString() +
-                        ":" +
-                        options.blockSize.toString() +
-                        ":" +
-                        options.parallel.toString() +
-                        ":" +
-                        + "0" //to mimic C# "maxThreads = null - here, a "0" is correct
-                        + ":"
-                        + options.derivedKeyLength
-                        + ":"
-                        + saltBuffer.toString('hex')
-                        + ":"
-                        + key.toString('hex');
+        } else {
+            scrypt(passwordBuffer,
+                saltBuffer,
+                options.cost,
+                options.blockSize,
+                options.parallel,
+                options.derivedKeyLength,
+                asyncFunc,
+                function (error, progress, key) {
 
-                    callback(null, 1.0, keyString);
+                    if (error) {
+                        callback(error);
+                        //outputText += "Cancelled: " + parseInt(100 * progress) + "% done";
+
+                    } else if (key) {
+                        key = new buffer.SlowBuffer(key);
+
+                        var keyString = "scrypt2:" +
+                            options.cost.toString() +
+                            ":" +
+                            options.blockSize.toString() +
+                            ":" +
+                            options.parallel.toString() +
+                            ":" +
+                            + "0" //to mimic C# "maxThreads = null - here, a "0" is correct
+                            + ":"
+                            + options.derivedKeyLength
+                            + ":"
+                            + saltBuffer.toString('hex')
+                            + ":"
+                            + key.toString('hex');
+
+                        callback(null, 1.0, keyString);
 
 
-                }
+                    }
 
-                else {
-                    // update UI with progress complete
-                    callback(null, progress, null);
-                }
+                    else if(progress || key) {
+                        // update UI with progress complete
+                        callback(null, progress, null);
+                    }
 
 
-            });
+                });
+        }
+
+        
 
     }
 
     this.comparePasswordWithHash = function(password, hashString, callback2) {
+        var asyncFunc = true;
+        if (callback2 == null) {
+            asyncFunc = false;
+        }
         var parts = hashString.split(":");
         if (parts.size < 8) {
-            callback2(false);
-            return;
+            if (asyncFunc) {
+                callback2("This is not a valid hash string");
+            }
+            
+            return false;
         }
         if (parts[0] != "scrypt2") {
-            callback2(false);
-            return;
+            if (asyncFunc) {
+                callback2("This is not a valid hash string");
+
+            }
+            return false;
         }
         var cost = parseInt(parts[1]);
         var blockSize = parseInt(parts[2]);
@@ -102,23 +147,41 @@ function scryptHandler() {
         var derivedKeyLength = parseInt(parts[5]);
         var salt = decodeURIComponent(parts[6].replace(/\s+/g, '').replace(/[0-9a-f]{2}/g, '%$&'));
 
-        that.Hash(password,
-            {
-                "salt": salt,
-                "cost": cost,
-                "blockSize": blockSize,
-                "parallel": parallel,
-                "derivedKeyLength": derivedKeyLength
-            },
-            function(error, progress, key) {
-                if (key) {
-                    if (key == hashString) {
-                        callback2(true);
-                    } else {
-                        callback2(false);
+        if (!asyncFunc) {
+            var syncKey = that.Hash(password,
+                {
+                    "salt": salt,
+                    "cost": cost,
+                    "blockSize": blockSize,
+                    "parallel": parallel,
+                    "derivedKeyLength": derivedKeyLength
+                });
+            if (syncKey == hashString) {
+                return true;
+            } else {
+                return false;
+            }
+
+        } else {
+            that.Hash(password,
+                {
+                    "salt": salt,
+                    "cost": cost,
+                    "blockSize": blockSize,
+                    "parallel": parallel,
+                    "derivedKeyLength": derivedKeyLength
+                },
+                function (error, progress, key) {
+                    if (key) {
+                        if (key == hashString) {
+                            callback2(true);
+                        } else {
+                            callback2(false);
+                        }
                     }
-                }
-            });
+                });
+        }
+
     }
 }
 

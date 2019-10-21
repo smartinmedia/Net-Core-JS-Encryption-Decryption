@@ -127,25 +127,38 @@ also the salt and all the parameters. So, e. g. if(key){//Here is everything, wh
 As with C#, we also have a function to compare a password to the hash. So, when a user logs in and sends the password, you can compare
 the password against the hash/key. The comparison may look a little bit confusing. This time, the callback function, which you 
 send has to just check for "true" or "false".
+You can run Scrypt asynchronously and get a progress (plus you can cancel) by passing a callback function.
+Scrypt will pass the hash key to that callback function. If you omit the callback function, then Scrypt runs
+synchronously and returns the key. So either, you run sH.Hash(password, options, callback);
+or you run var key = sH.Hash(password, options);
 Have a look at the "index.html". There is the entire test. You only need to include: 
 <br/>
 crypto-js.min.js, scrypt.min.js, encryptionHandler.js and scryptHandler.js with your code.
 
 ```javascript
-	// This is the ciphertext, which was encrypted by C# to check the interchangeability:
-	var encryptedBase64FromCSharp = "uTkXNB+PSTjzwUCJbfAHVHd95YOlcJr38wbF08ZxqNw=:PNGRjWb5tOINneaVVf8+cw==:Aic+gosvLjTrCebzY8l/usTh+kWuE0v1xSWw7apYunI=";
-    var passPhrase = "This_is_my_password!";
+	            // Test AES
+            // This is the ciphertext, which was encrypted by C# to check the interchangeability:
+            var encryptedBase64FromCSharp =
+                "uTkXNB+PSTjzwUCJbfAHVHd95YOlcJr38wbF08ZxqNw=:PNGRjWb5tOINneaVVf8+cw==:Aic+gosvLjTrCebzY8l/usTh+kWuE0v1xSWw7apYunI=";
+            var passPhrase = "This_is_my_password!";
 
-    var eH = new encryptionHandler();
+            var eH = new encryptionHandler();
 
-    var decryptedFromCSharp = eH.decrypt(encryptedBase64FromCSharp, passPhrase);
 
-	//Now encrypt again with JS
-    var encryptTextWithJs = eH.encrypt(decryptedFromCSharp, "This_is_my_password!");
-	//And decrypt again with JS
-    var decryptedTextWithJs = eH.decrypt(encryptTextWithJs, "This_is_my_password!");
+            var decryptedFromCSharp = eH.decrypt(encryptedBase64FromCSharp, passPhrase);
 
-	//
+            var spanEnc = document.getElementById("output");
+            
+
+            var outputText = "The decrypted text from C#: " + decryptedFromCSharp;
+            spanEnc.innerHTML = outputText;
+            var encryptTextWithJs = eH.encrypt(decryptedFromCSharp, "This_is_my_password!");
+
+            var decryptedTextWithJs = eH.decrypt(encryptTextWithJs, "This_is_my_password!");
+            outputText += "<br>And now this was encrypted and decrypted again with JS: " + decryptedTextWithJs;
+            spanEnc.innerHTML = outputText;
+
+            //
             // Test Scrypt
             //
             var outputText2 = "<br><br>Testing Scrypt<br> with password = 'This_is_my_password!' and salt = 'This_is_my_SALT!'";
@@ -204,11 +217,19 @@ crypto-js.min.js, scrypt.min.js, encryptionHandler.js and scryptHandler.js with 
             }
 
             sH.Hash(password, options, callback);
-
-            //now testing the PW
-            function testHash(password, hashString, callback) {
-
+            var spanScryptsynch = document.getElementById("outputScrypt-synch");
+            var sH2 = new scryptHandler();
+            var synchKey = sH2.Hash(passPhrase, options);
+            spanScryptsynch.innerHTML = "<br/><br/>You can also get the key synchronously without callback function: " +
+                synchKey;
+            if (sH2.comparePasswordWithHash(passPhrase, synchKey)) {
+                spanScryptsynch.innerHTML +=
+                    "<br/>And the derived hash key matches with the test (also in synchronous mode)!";
+            } else {
+                spanScryptsynch.innerHTML +=
+                    "<br/>The derived hash key do not match with the test (in synchronous mode)!";
             }
+            
 
 ```
 

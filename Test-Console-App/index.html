@@ -26,14 +26,21 @@
         <h1>Test for hashing with Scrypt</h1>
         <p>
             There is also an implementation for Scrypt. Scrypt is a new(er) way to hash passwords more securely, if
-            <br/>you want to store them in your database, etc. Scrypt takes longer to hash - you can set it according
-            <br/>to hardware performance. I. e. you can define that hashing a password takes a second on a fast machine.
-            <br/>The purpose of that is to make brute force (and dictionary) attacks considerably harder for attackers.
-            <br/>
+            <br />you want to store them in your database, etc. Scrypt takes longer to hash - you can set it according
+            <br />to hardware performance. I. e. you can define that hashing a password takes a second on a fast machine.
+            <br />The purpose of that is to make brute force (and dictionary) attacks considerably harder for attackers.
+            <br />
+            You can run Scrypt asynchronously and get a progress (plus you can cancel) by passing a callback function.
+            Scrypt will pass the hash key to that callback function. If you omit the callback function, then Scrypt runs
+            synchronously and returns the key. So either, you run sH.Hash(password, options, callback);
+            or you run var key = sH.Hash(password, options);
+
             <strong>Progress: <span id="progress"></span></strong>
-            <br/>
-            
+            <br />
+
             <strong><span id="outputScrypt"></span></strong>
+            <br/><br/>
+            <strong><span id="outputScrypt-synch"></span></strong>
         </p>
         <script type="text/javascript" src="./crypto-js.min.js"></script>
         <script type="text/javascript" src="./scrypt.min.js"></script>
@@ -44,7 +51,7 @@
         <script type="text/javascript">
 
             // Test AES
-
+            // This is the ciphertext, which was encrypted by C# to check the interchangeability:
             var encryptedBase64FromCSharp =
                 "uTkXNB+PSTjzwUCJbfAHVHd95YOlcJr38wbF08ZxqNw=:PNGRjWb5tOINneaVVf8+cw==:Aic+gosvLjTrCebzY8l/usTh+kWuE0v1xSWw7apYunI=";
             var passPhrase = "This_is_my_password!";
@@ -124,12 +131,19 @@
             }
 
             sH.Hash(password, options, callback);
-
-            //now testing the PW
-            function testHash(password, hashString, callback) {
-
+            var spanScryptsynch = document.getElementById("outputScrypt-synch");
+            var sH2 = new scryptHandler();
+            var synchKey = sH2.Hash(passPhrase, options);
+            spanScryptsynch.innerHTML = "<br/><br/>You can also get the key synchronously without callback function: " +
+                synchKey;
+            if (sH2.comparePasswordWithHash(passPhrase, synchKey)) {
+                spanScryptsynch.innerHTML +=
+                    "<br/>And the derived hash key matches with the test (also in synchronous mode)!";
+            } else {
+                spanScryptsynch.innerHTML +=
+                    "<br/>The derived hash key do not match with the test (in synchronous mode)!";
             }
-
+            
 
         </script>
 
