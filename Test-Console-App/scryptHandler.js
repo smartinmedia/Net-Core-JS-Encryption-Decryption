@@ -146,7 +146,8 @@ function scryptHandler() {
         var blockSize = parseInt(parts[2]);
         var parallel = parseInt(parts[3]);
         var keySizeInBytes = parseInt(parts[5]);
-        var salt = decodeURIComponent(parts[6].replace(/\s+/g, '').replace(/[0-9a-f]{2}/g, '%$&'));
+        var salt = parts[6];
+        //var salt = decodeURIComponent(parts[6].replace(/\s+/g, '').replace(/[0-9a-f]{2}/g, '%$&'));
 
         if (!asyncFunc) {
             var syncKey = that.Hash(password,
