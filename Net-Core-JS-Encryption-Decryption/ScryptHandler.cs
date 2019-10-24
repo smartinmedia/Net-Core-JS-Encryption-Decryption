@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using CryptSharp.Utility;
+using Net_Core_JS_Encryption_Decryption.Helpers;
 
 namespace Net_Core_JS_Encryption_Decryption
 {
@@ -14,17 +15,22 @@ namespace Net_Core_JS_Encryption_Decryption
             return ScryptEncoder(password, null, 16384, 8, 1, null, 32);
         }
 
-        public static string Hash(string password, string salt)
+        public static byte[] GetOnlyHashBytes(byte[] password, PasswordDerivationOptions sO)
         {
-            return ScryptEncoder(password, salt, 16384, 8, 1, null, 32);
+            var bytes = SCrypt.ComputeDerivedKey(password, sO.Salt, sO.Cost, sO.BlockSize, sO.Parallel, null, sO.KeySizeInBytes);
+            //return Convert.ToBase64String(bytes);
+            return bytes;
 
         }
 
-        public static string Hash(string password, string salt, int cost = 16384, int blockSize = 8, int parallel = 1,
-            int? maxThreads = null, int derivedKeyLength = 32)
+        public static byte[] GetOnlyHashBytes(byte[] password, CipherTextObject sO)
         {
-            return ScryptEncoder(password, salt, cost, blockSize, parallel, maxThreads, derivedKeyLength);
+            var bytes = SCrypt.ComputeDerivedKey(password, ScryptHandler.StringToByteArray(sO.Salt), sO.Cost, sO.BlockSize, sO.Parallel, null, sO.KeySizeInBytes);
+            //return Convert.ToBase64String(bytes);
+            return bytes;
+
         }
+
 
         public static byte[] GetOnlyHashBytes(byte[] password, byte[] salt = null, int cost = 16384, int blockSize = 8, int parallel = 1,
             int? maxThreads = null, int derivedKeyLength = 32)
@@ -39,6 +45,20 @@ namespace Net_Core_JS_Encryption_Decryption
 
         }
 
+
+        public static string Hash(string password, string salt)
+        {
+            return ScryptEncoder(password, salt, 16384, 8, 1, null, 32);
+
+        }
+
+        public static string Hash(string password, string salt, int cost = 16384, int blockSize = 8, int parallel = 1,
+            int? maxThreads = null, int derivedKeyLength = 32)
+        {
+            return ScryptEncoder(password, salt, cost, blockSize, parallel, maxThreads, derivedKeyLength);
+        }
+
+        
         public static bool ComparePasswordWithHash(string password, string scryptHashString)
         {
             var scryptArray = scryptHashString.Split(":");
@@ -72,8 +92,7 @@ namespace Net_Core_JS_Encryption_Decryption
             return false;
         }
 
-
-        private static string ScryptEncoder(string secret, string salt, int cost = 16384, int blockSize = 8, int parallel = 1, int? maxThreads = null, int derivedKeyLength = 32)
+       private static string ScryptEncoder(string secret, string salt, int cost = 16384, int blockSize = 8, int parallel = 1, int? maxThreads = null, int derivedKeyLengthInBytes = 32)
         {
             var keyBytes = Encoding.UTF8.GetBytes(secret);
             byte[] saltBytes;
@@ -86,7 +105,7 @@ namespace Net_Core_JS_Encryption_Decryption
                 saltBytes = Encoding.UTF8.GetBytes(salt);
             }
 
-            var bytes = SCrypt.ComputeDerivedKey(keyBytes, saltBytes, cost, blockSize, parallel, maxThreads, derivedKeyLength);
+            var bytes = SCrypt.ComputeDerivedKey(keyBytes, saltBytes, cost, blockSize, parallel, maxThreads, derivedKeyLengthInBytes);
             //return Convert.ToBase64String(bytes);
 
             string maxThreadsString;
@@ -100,13 +119,15 @@ namespace Net_Core_JS_Encryption_Decryption
 
             }
 
-            string hash = "scrypt2:" + cost.ToString() + ":" + blockSize.ToString() + ":" + parallel.ToString() + ":" + maxThreadsString + ":" + derivedKeyLength.ToString()
+            string hash = "scrypt2:" + cost.ToString() + ":" + blockSize.ToString() + ":" + parallel.ToString() + ":" + maxThreadsString + ":" + derivedKeyLengthInBytes.ToString()
                           + ":" + ByteArrayToString(saltBytes) + ":" + ByteArrayToString(bytes);
 
             return hash;
         }
 
-        private static string ByteArrayToString(byte[] ba)
+
+
+        public static string ByteArrayToString(byte[] ba)
         {
             StringBuilder hex = new StringBuilder(ba.Length * 2);
             foreach (byte b in ba)

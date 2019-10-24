@@ -29,6 +29,9 @@ namespace DotNet_Js_Encryption_Decryption
             string passPhrase = PasswordGenerator.GenerateRandomPassword(20);
             passPhrase = "This_is_my_password!";
 
+
+            // Uses by default "Scrypt" as the Password Derivation method. If you want to change this, you have to set
+            // PasswordDerivationOptions (create an object of the class)
             var enc = EncryptionHandler.Encrypt(plainText, passPhrase);
             Console.WriteLine("Plaintext: 'This is my secret text' with password 'This_is_my_password!' results in ciphertext: " + enc);
 

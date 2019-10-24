@@ -2,12 +2,13 @@
  * How this works:
  * password: the password to hash as a string
  * options (optional): objects in the form:
+ *  
  * {
- *      "salt": string, //(can be empty or null, then string is automatically created)
- *      "cost": int, //(the "N" of scrypt, default is 16384)
- *      "blockSize": int, // (the "r", default is 8)
- *      "parallel": int, // (the "p", default is 1)
- *      "derivedKeyLength": int // (default is 32)
+ *      "Salt": string, // Can be empty. If you provide, it must be in Hex!!
+ *      "Cost": int, //(the "N" of scrypt, default is 16384)
+ *      "BlockSize": int, // (the "r", default is 8)
+ *      "Parallel": int, // (the "p", default is 1)
+ *      "KeySizeInBytes": int // (default is 32)
  * }
  *
  *
@@ -26,45 +27,45 @@ function scryptHandler() {
         }
         if (options == null) {
             options = {
-                "salt": CryptoJS.enc.Base64.stringify(CryptoJS.lib.WordArray.random(32)), //(can be empty or null, then string is automatically created)
-                "cost": 16384, //(the "N" of scrypt, default is 16384)
-                "blockSize": 8, // (the "r", default is 8)
-                "parallel": 1, // (the "p", default is 1)
-                "derivedKeyLength": 32 // (default is 32)
+                "Salt": CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(32)), //(can be empty or null, then string is automatically created)
+                "Cost": 16384, //(the "N" of scrypt, default is 16384)
+                "BlockSize": 8, // (the "r", default is 8)
+                "Parallel": 1, // (the "p", default is 1)
+                "KeySizeInBytes": 32 // (default is 32)
             }
         }
 
         // if one of the options exist, but others not
-        ('salt' in options) || (options.salt = CryptoJS.enc.Base64.stringify(CryptoJS.lib.WordArray.random(32)));
-        ('cost' in options) || (options.cost = 16384);
-        ('blockSize' in options) || (options.blockSize = 8);
-        ('parallel' in options) || (options.parallel = 1);
-        ('derivedKeyLength' in options) || (options.derivedKeyLength = 32);
+        ('Salt' in options) || (options.Salt = CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(32)));
+        ('Cost' in options) || (options.Cost = 16384);
+        ('BlockSize' in options) || (options.BlockSize = 8);
+        ('Parallel' in options) || (options.Parallel = 1);
+        ('KeySizeInBytes' in options) || (options.KeySizeInBytes = 32);
 
         var passwordBuffer = new buffer.SlowBuffer(password.normalize('NFKC'), 'utf8');
-        var saltBuffer = new buffer.SlowBuffer(options.salt.normalize('NFKC'), 'utf8');
-
+        var saltBuffer = new buffer.SlowBuffer(options.Salt, 'hex');
+        
         if (!asyncFunc) {
             var synchKey = scrypt(passwordBuffer,
                 saltBuffer,
-                options.cost,
-                options.blockSize,
-                options.parallel,
-                options.derivedKeyLength,
+                options.Cost,
+                options.BlockSize,
+                options.Parallel,
+                options.KeySizeInBytes,
                 asyncFunc);
 
             synchKey = new buffer.SlowBuffer(synchKey);
 
             var keyString = "scrypt2:" +
-                options.cost.toString() +
+                options.Cost.toString() +
                 ":" +
-                options.blockSize.toString() +
+                options.BlockSize.toString() +
                 ":" +
-                options.parallel.toString() +
+                options.Parallel.toString() +
                 ":" +
                 + "0" //to mimic C# "maxThreads = null - here, a "0" is correct
                 + ":"
-                + options.derivedKeyLength
+                + options.KeySizeInBytes
                 + ":"
                 + saltBuffer.toString('hex')
                 + ":"
@@ -74,10 +75,10 @@ function scryptHandler() {
         } else {
             scrypt(passwordBuffer,
                 saltBuffer,
-                options.cost,
-                options.blockSize,
-                options.parallel,
-                options.derivedKeyLength,
+                options.Cost,
+                options.BlockSize,
+                options.Parallel,
+                options.KeySizeInBytes,
                 asyncFunc,
                 function (error, progress, key) {
 
@@ -89,15 +90,15 @@ function scryptHandler() {
                         key = new buffer.SlowBuffer(key);
 
                         var keyString = "scrypt2:" +
-                            options.cost.toString() +
+                            options.Cost.toString() +
                             ":" +
-                            options.blockSize.toString() +
+                            options.BlockSize.toString() +
                             ":" +
-                            options.parallel.toString() +
+                            options.Parallel.toString() +
                             ":" +
                             + "0" //to mimic C# "maxThreads = null - here, a "0" is correct
                             + ":"
-                            + options.derivedKeyLength
+                            + options.KeySizeInBytes
                             + ":"
                             + saltBuffer.toString('hex')
                             + ":"
@@ -144,17 +145,17 @@ function scryptHandler() {
         var cost = parseInt(parts[1]);
         var blockSize = parseInt(parts[2]);
         var parallel = parseInt(parts[3]);
-        var derivedKeyLength = parseInt(parts[5]);
+        var keySizeInBytes = parseInt(parts[5]);
         var salt = decodeURIComponent(parts[6].replace(/\s+/g, '').replace(/[0-9a-f]{2}/g, '%$&'));
 
         if (!asyncFunc) {
             var syncKey = that.Hash(password,
                 {
-                    "salt": salt,
-                    "cost": cost,
-                    "blockSize": blockSize,
-                    "parallel": parallel,
-                    "derivedKeyLength": derivedKeyLength
+                    "Salt": salt,
+                    "Cost": cost,
+                    "BlockSize": blockSize,
+                    "Parallel": parallel,
+                    "KeySizeInBytes": keySizeInBytes
                 });
             if (syncKey == hashString) {
                 return true;
@@ -165,11 +166,11 @@ function scryptHandler() {
         } else {
             that.Hash(password,
                 {
-                    "salt": salt,
-                    "cost": cost,
-                    "blockSize": blockSize,
-                    "parallel": parallel,
-                    "derivedKeyLength": derivedKeyLength
+                    "Salt": salt,
+                    "Cost": cost,
+                    "BlockSize": blockSize,
+                    "Parallel": parallel,
+                    "KeySizeInBytes": KeySizeInBytes
                 },
                 function (error, progress, key) {
                     if (key) {
@@ -183,5 +184,20 @@ function scryptHandler() {
         }
 
     }
+
+    this.GetOnlyHashInHexString = function (password, cO) {
+
+        var options = {
+            "Salt": cO["Salt"], //(can be empty or null, then string is automatically created)
+            "Cost": cO["Cost"], //(the "N" of scrypt, default is 16384)
+            "BlockSize": cO["BlockSize"], // (the "r", default is 8)
+            "Parallel": cO["Parallel"], // (the "p", default is 1)
+            "KeySizeInBytes": cO["KeySizeInBytes"] // (default is 32)
+        }
+        var hash = that.Hash(password, options);
+        var parts = hash.split(":");
+        return parts[7];
+    }
+
 }
 

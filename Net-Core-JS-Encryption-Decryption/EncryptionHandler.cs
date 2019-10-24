@@ -5,6 +5,8 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
+using Net_Core_JS_Encryption_Decryption.Helpers;
+using Newtonsoft.Json;
 
 /*
  * .NET Core to / from JavaScript Encryption / Decryption
@@ -19,14 +21,7 @@ namespace Net_Core_JS_Encryption_Decryption
 {
     public static class EncryptionHandler
     {
-        // This constant is used to determine the keysize of the encryption algorithm in bits.
-        // We divide this by 8 within the code below to get the equivalent number of bytes.
-        private const int Keysize = 256;
 
-        // This constant determines the number of iterations for the password bytes generation function.
-        private const int DerivationIterations = 1000;
-
-        
         /* This method not only returns ciphertext, but also the IV and the SALT, 
            which is important for the deciphering on the JS side. Having the same 
            IV and same SALT as suggested by demos on Stackoverflow, etc, is detrimental
@@ -34,50 +29,86 @@ namespace Net_Core_JS_Encryption_Decryption
            attacker cannot make anything with IV and SALT without the password.
            Explanation: With different IV, the same plaintext always results in different
            ciphertexts. With different SALTS, the same password always results in different
-           ciphertexts. The ciphertext will look like this (byte array):
-           SALT (32 bytes) + IV (16 bytes) + Ciphertext (N bytes) ---> whole thing in Base64
+           ciphertexts. The ciphertext will be a JSON Object:
         */
-
-
-
-        public static string Encrypt(string plainText, string passPhrase)
+        /*
+        {
+            "DerivationType": "scrypt", // optionally: rfc
+            "Salt": "3a069e9126af66a839067f8a272081136d8ce63ed72176dc8a29973d2b15361f", //SALT must be in Hex
+            "Cost": 16384, //only for DerivationType "scrypt", not for "rfc"
+            "BlockSize": 8, //only for DerivationType "scrypt", not for "rfc"
+            "Parallel": 1, //only for DerivationType "scrypt", not for "rfc"
+            "KeySizeInBytes": 32,
+            "DerivationIterations": 0 // Only for DerivationType "rfc", not needed for "scrypt"
+            
+        }
+        */
+        public static string Encrypt(string plainText, string passPhrase, PasswordDerivationOptions pO = null)
         {
             // Salt and IV is randomly generated each time, but is preprended to encrypted cipher text
             // so that the same Salt and IV values can be used when decrypting.  
 
+            
             var myRijndael = new RijndaelManaged();
             myRijndael.BlockSize = 128;
-            myRijndael.KeySize = Keysize;
             myRijndael.IV = GenerateXBytesOfRandomEntropy(16); //IV must be 16 bytes / 128 bit
             myRijndael.Padding = PaddingMode.PKCS7;
             myRijndael.Mode = CipherMode.CBC;
-            var salt = GenerateXBytesOfRandomEntropy(32);
-            Rfc2898DeriveBytes rfc2898 = new Rfc2898DeriveBytes(System.Text.Encoding.UTF8.GetBytes(passPhrase), salt,
-                DerivationIterations);
-            myRijndael.Key = rfc2898.GetBytes(Keysize / 8);
+
+            // Using Scrypt for Key Derivation
+            if (pO == null || pO.DerivationType == "scrypt")
+            {
+                pO = new PasswordDerivationOptions();
+                pO.DerivationType = "scrypt";
+                myRijndael.Key =
+                    ScryptHandler.GetOnlyHashBytes(System.Text.Encoding.UTF8.GetBytes(passPhrase), pO);
+            }
+            // Using RFC2898 for Key Derivation
+            else
+            {
+                if (pO.Salt == null)
+                {
+                    pO.Salt = GenerateXBytesOfRandomEntropy(32);
+                }
+                myRijndael.KeySize = pO.KeySizeInBytes * 8;
+                Rfc2898DeriveBytes rfc2898 = new Rfc2898DeriveBytes(System.Text.Encoding.UTF8.GetBytes(passPhrase), pO.Salt,
+                    pO.DerivationIterations);
+                myRijndael.Key = rfc2898.GetBytes(pO.KeySizeInBytes);
+            }
+
             byte[] utf8Text = new System.Text.UTF8Encoding().GetBytes(plainText);
             ICryptoTransform transform = myRijndael.CreateEncryptor();
             byte[] cipherText = transform.TransformFinalBlock(utf8Text, 0, utf8Text.Length);
-            var cipherWithSaltAndIv = Convert.ToBase64String(salt) + ":" + Convert.ToBase64String(myRijndael.IV) + ":" +
-                                      Convert.ToBase64String(cipherText);
-            
-            return cipherWithSaltAndIv;
+            string cipherWithSaltAndIv;
+            var cipherWithSaltAndIvObject = new CipherTextObject(pO, cipherText, myRijndael.IV);
+            string json = JsonConvert.SerializeObject(cipherWithSaltAndIvObject, Formatting.Indented);
+            return json;
         }
 
-        public static string Decrypt(string encryptedData, string passPhrase)
+        public static string Decrypt(string cipherTextJson, string passPhrase)
         {
-            string[] parts = encryptedData.Split(":");
+            CipherTextObject cO = JsonConvert.DeserializeObject<CipherTextObject>(cipherTextJson);
+
             var myRijndael = new RijndaelManaged();
             myRijndael.BlockSize = 128;
-            myRijndael.KeySize = Keysize;
-            myRijndael.IV = Convert.FromBase64String(parts[1]);//Encoding.UTF8.GetBytes("1234567890123456");
+            myRijndael.KeySize = cO.KeySizeInBytes * 8;
+            myRijndael.IV = Convert.FromBase64String(cO.AesRijndaelIv);
             myRijndael.Padding = PaddingMode.PKCS7;
             myRijndael.Mode = CipherMode.CBC;
-            var salt = Convert.FromBase64String(parts[0]);//  Encoding.UTF8.GetBytes("12345678901234567890123456789012"); //GenerateXBytesOfRandomEntropy(32);
-            Rfc2898DeriveBytes rfc2898 = new Rfc2898DeriveBytes(System.Text.Encoding.UTF8.GetBytes(passPhrase), salt,
-                DerivationIterations);
-            myRijndael.Key = rfc2898.GetBytes(Keysize / 8);
-            var encryptedBytes = Convert.FromBase64String(parts[2]);
+            var salt = ScryptHandler.StringToByteArray(cO.Salt);
+            if (cO.DerivationType == "scrypt")
+            {
+                myRijndael.Key =
+                    ScryptHandler.GetOnlyHashBytes(System.Text.Encoding.UTF8.GetBytes(passPhrase), cO);
+            }
+            else
+            {
+                Rfc2898DeriveBytes rfc2898 = new Rfc2898DeriveBytes(System.Text.Encoding.UTF8.GetBytes(passPhrase), salt,
+                    cO.DerivationIterations);
+                myRijndael.Key = rfc2898.GetBytes(cO.KeySizeInBytes);
+            }
+
+            var encryptedBytes = Convert.FromBase64String(cO.CipherOutputText);
             ICryptoTransform transform = myRijndael.CreateDecryptor();
             byte[] cipherText = transform.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
             return System.Text.Encoding.UTF8.GetString(cipherText);
