@@ -112,6 +112,11 @@
         return JSON.stringify(options);
     }
 
+    this.transformTextToHex = function(text) {
+        var utf8 = CryptoJS.enc.Utf8.parse(text);
+        return CryptoJS.enc.Hex.stringify(utf8);
+    }
+
 }
 
 

@@ -58,7 +58,6 @@
 
         <script type="text/javascript" src="./encryptionHandler.js"></script>
         <script type="text/javascript" src="./scryptHandler.js"></script>
-        <script type="text/javascript" src="./HexBase64.js"></script>
         <script type="text/javascript">
 
             // Test AES
@@ -146,9 +145,10 @@
                 }
 
             }
-
+            
             sH.Hash(password, options, callback);
             var spanScryptsynch = document.getElementById("outputScrypt-synch");
+            
             var sH2 = new scryptHandler();
             var synchKey = sH2.Hash(passPhrase, options);
             spanScryptsynch.innerHTML = "<br/><br/>You can also get the key synchronously without callback function: " +
@@ -161,10 +161,10 @@
                     "<br/>The derived hash key do not match with the test (in synchronous mode)!";
             }
 
-            var testHash = sH2.SaltWithRegularString("This_is_my_password!", "1");
+            var testHash = sH2.Hash("This_is_my_password!", { "Salt": eH.transformTextToHex("1") });
             spanScryptsynch.innerHTML +=
                 "<br/><br/>The derived password with a given string Salt is: " + testHash;
-
+                
         </script>
 
     </body>

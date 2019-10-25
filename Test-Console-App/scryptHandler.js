@@ -171,7 +171,7 @@ function scryptHandler() {
                     "Cost": cost,
                     "BlockSize": blockSize,
                     "Parallel": parallel,
-                    "KeySizeInBytes": KeySizeInBytes
+                    "KeySizeInBytes": keySizeInBytes
                 },
                 function (error, progress, key) {
                     if (key) {
