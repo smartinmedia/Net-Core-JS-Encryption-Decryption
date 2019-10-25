@@ -81,7 +81,7 @@ namespace Net_Core_JS_Encryption_Decryption
             byte[] cipherText = transform.TransformFinalBlock(utf8Text, 0, utf8Text.Length);
             string cipherWithSaltAndIv;
             var cipherWithSaltAndIvObject = new CipherTextObject(pO, cipherText, myRijndael.IV);
-            string json = JsonConvert.SerializeObject(cipherWithSaltAndIvObject, Formatting.Indented);
+            string json = JsonConvert.SerializeObject(cipherWithSaltAndIvObject, Formatting.None);
             return json;
         }
 
