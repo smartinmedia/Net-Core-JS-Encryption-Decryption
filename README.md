@@ -19,10 +19,11 @@ it is really important to minimize the risk of dictionary attacks. Scrypt is one
 
 ## What's the functionality?
 
-Easy: <br/>You need a plaintext and a password and can call the encrypt and decrypt function in both, C# and JS. The encrypted text is interchangeable between
-the 2 languages. The test console application shows it for C# and for JS (just run  the index.html for JS).
+3 solutions:<br/>1. You need a plaintext and a password and can call the encrypt and decrypt function in both, C# and JS. The encrypted text is interchangeable between
+the 2 languages. The selected encryption algorithm is AES. The test console application shows it for C# and for JS (just run  the index.html for JS).
 Will be explained below.
-Also, the library has a password generator, which you can give a selection of characters, you want it to use (e. g. "abcdefghijklmnopqrstuvwxyz0123456789")
+<br/>2. Hashing your users' passwords. With Scrypt, you can securely hash and store your users' passwords. I also implemented Scrypt into the AES key derivation, which makes it "safer" than older approaches like RFC2898. However - with the AES encryption, you can select either (default is Scrypt).
+<br/>3. Also, the library has a password generator, which you can give a selection of characters, you want it to use (e. g. "abcdefghijklmnopqrstuvwxyz0123456789")
 and it will figure out the rest.
 
 ## A little bit cryptography
@@ -61,7 +62,7 @@ text as you do, it cannot happen that the result is the same and I then know, th
 IV is pretty similar to a SALT. It is added to the plaintext. This means, even if you don't salt a password, because of the IV, every encryption of the same plaintext results in a 
 different ciphertext, so it is harder for attackers.<br/>
 This library creates random SALT and random IV for each encryption. SALT and IV are appended to the ciphertext and may be transmitted and communicated in the open.
-Again, SALT and IV cannot (and don't have to) be hidden from the attacker. They are of no use to him, but are needed to decrypt.
+Again, SALT and IV cannot (and don't have to) be hidden from the attacker. They are of no use to him, but are needed to decrypt. In this library, I introduced the Scrypt password derivation functionality into AES. This means, if your user's password is e. g. "Hello", Scrypt is used by default to create a 256 bit (32 byte) key from it. You can also use (by changing the options) the RFC2898 standard method, usually implemented in AES. On an i7 Laptop with 12 GB RAM, the Scrypt with parameters 16384, 8, 1, 32 use 0.18 seconds in C# and appr. 1 sec in JS. You can increase the 16384 to numbers, which are to the power of 2 to slow down the key derivation and make it harder on attackers.
 
 ## Get started here!
 
@@ -69,54 +70,8 @@ Let's see how we can encrypt / decrypt in C# and how to hash with Scrypt.
 For hashing, you also have a function to compare a password with the hash. The hash contains all the settings of N, p, r, etc of Scrypt, so you don't need to worry about that.'
 
 ```csharp
-	//Encrypt plain text in C# with a random password
-    string plainText = "This is my secret text!";
-    //You can also use the built in password generator!!
-    //string passPhrase = PasswordGenerator.GenerateRandomPassword(20);
-            
-	string passPhrase = "This_is_my_password!";
+	        var saltBuffer = new buffer.SlowBuffer(options.Salt, 'hex');
 
-    var enc = EncryptionHandler.Encrypt(plainText, passPhrase);
-    Console.WriteLine("Plaintext: 'This is my secret text' with password 'This_is_my_password!' results in ciphertext: " + enc);
-
-    var dec3 = EncryptionHandler.Decrypt(enc, passPhrase);
-    Console.WriteLine("And decrypting again: " + dec3);
-    Console.WriteLine("Please start the index.html to see the same in Javascript. Encryption / Decryption run in both ways and can be interchanged between C# and JS!");
-
-	/*
-             * Testing Scrypt 
-             * The recommended parameters for interactive logins as of 2009 are
-             * iterationCount=16384, blockSize=8, threadCount=1, those are the default values.
-             * They should be increased as memory latency and CPU parallelism increases.
-             */
-
-            Stopwatch stopWatch = new Stopwatch();
-            stopWatch.Start();
-            
-            // NOW RUNNING SCRYPT
-            string hashString = ScryptHandler.Hash(passPhrase, "This_is_my_SALT!", 16384);
-            stopWatch.Stop();
-
-            Console.WriteLine("\r\nTesting Scrypt with the password 'This_is_my_password!': " + hashString);
-            bool compare = ScryptHandler.ComparePasswordWithHash("This_is_my_password!", hashString);
-            if (compare)
-            {
-                Console.WriteLine("The password matches with the stored hash!");
-            }
-            else
-            {
-                Console.WriteLine("The password does not match with the stored hash!");
-            }
-            
-            // Get the elapsed time as a TimeSpan value.
-            TimeSpan ts = stopWatch.Elapsed;
-
-            // Format and display the TimeSpan value.
-            string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
-                ts.Hours, ts.Minutes, ts.Seconds,
-                ts.Milliseconds / 10);
-            Console.WriteLine("Time elapsed in HH:MM:SS (only for creating the hash, not checking): " + elapsedTime);
-        }
 ```
 
 
@@ -136,10 +91,11 @@ Have a look at the "index.html". There is the entire test. You only need to incl
 crypto-js.min.js, scrypt.min.js, encryptionHandler.js and scryptHandler.js with your code.
 
 ```javascript
-	            // Test AES
+	   // Test AES
             // This is the ciphertext, which was encrypted by C# to check the interchangeability:
-            var encryptedBase64FromCSharp =
-                "uTkXNB+PSTjzwUCJbfAHVHd95YOlcJr38wbF08ZxqNw=:PNGRjWb5tOINneaVVf8+cw==:Aic+gosvLjTrCebzY8l/usTh+kWuE0v1xSWw7apYunI=";
+            //var encryptedBase64FromCSharp = '{"DerivationType": "scrypt","Salt": "MmTt71gekdK62HbCD2ZUUkYBwVpMB6aWzYGJg+eUvBM=","Cost": 16384,"BlockSize": 8,"Parallel": 1,"KeySizeInBytes": 32,"DerivationIterations": 0,"AesRijndaelIv": "eIUwJ0pzcnr1HmSIVX4Qhw==","CipherOutputText": "BBhxsgDxth1u03appq/WIlXV+wbhUm7CMLZ/NazdJRA="}';
+            //var encryptedBase64FromCSharp ='{"DerivationType": "rfc","Salt": "ZPVKtxxU+ZOBcA5FMCGIrLCJhItZQr9xkhzw4GyXk1A=","Cost": 0,"BlockSize": 0,"Parallel": 0,"KeySizeInBytes": 32,"DerivationIterations": 10000,"AesRijndaelIv": "3aF7jwcjXiEkuPOn8oqK0g==","CipherOutputText": "rKn+tl0Y4xyPqtQ/kfz1yhgh0pckTHxhayLAPNF4vIA="}';
+            var encryptedBase64FromCSharp = '{"DerivationType": "scrypt", "Salt": "3a069e9126af66a839067f8a272081136d8ce63ed72176dc8a29973d2b15361f", "Cost": 16384, "BlockSize": 8, "Parallel": 1, "KeySizeInBytes": 32, "DerivationIterations": 0, "AesRijndaelIv": "NrCMq2XZ/woLCBq2haKPtQ==", "CipherOutputText": "8Llal3i445vIVWRIHsMQHdaJlpYoubcjmFczH0t7tEA="}';
             var passPhrase = "This_is_my_password!";
 
             var eH = new encryptionHandler();
@@ -148,7 +104,7 @@ crypto-js.min.js, scrypt.min.js, encryptionHandler.js and scryptHandler.js with 
             var decryptedFromCSharp = eH.decrypt(encryptedBase64FromCSharp, passPhrase);
 
             var spanEnc = document.getElementById("output");
-            
+
 
             var outputText = "The decrypted text from C#: " + decryptedFromCSharp;
             spanEnc.innerHTML = outputText;
@@ -163,11 +119,16 @@ crypto-js.min.js, scrypt.min.js, encryptionHandler.js and scryptHandler.js with 
             //
             var outputText2 = "<br><br>Testing Scrypt<br> with password = 'This_is_my_password!' and salt = 'This_is_my_SALT!'";
             var password = "This_is_my_password!";
-            var salt = "This_is_my_SALT!";
+            var saltString = "This_is_my_SALT!";
+
+            //SALT must be delivered as Hex!!
+            var wr = CryptoJS.enc.Utf8.parse(saltString);
+            var salt = CryptoJS.enc.Hex.stringify(wr);
+            
             var t0 = (new Date()).getTime(); //To measure time!
             /*
              You can add any of these options
-            var options = 
+            var options =
                 {
                       "salt": string, //(can be empty or null, then string is automatically created)
                       "cost": int, //(the "N" of scrypt, default is 16384)
@@ -179,19 +140,19 @@ crypto-js.min.js, scrypt.min.js, encryptionHandler.js and scryptHandler.js with 
             var sH = new scryptHandler();
 
             var options = { "salt": salt };
-            var callback = function(error, progress, key) {
+            var callback = function (error, progress, key) {
                 if (error) {
                     outputText2 += "There was an error: " + error;
                 }
                 else if (key) {
-                    outputText2 += "<br/>The key string for password " + password +" is: " + key;
+                    outputText2 += "<br/>The key string for password " + password + " is: " + key;
                     outputText2 += "<br/>It is compatible with C# as long as you leave maxThreads in C# at null";
                     outputText2 += "<br>Execution time: " + (((new Date()).getTime() - t0) / 1000) + ' seconds';
                     var spanScrypt = document.getElementById("outputScrypt");
                     spanScrypt.innerHTML = outputText2;
                     sH.comparePasswordWithHash(password,
                         key,
-                        function(isTheSame) {
+                        function (isTheSame) {
                             if (isTheSame) {
 
                                 var spanScrypt = document.getElementById("outputScrypt");
@@ -213,7 +174,7 @@ crypto-js.min.js, scrypt.min.js, encryptionHandler.js and scryptHandler.js with 
 
                     spanProgress.innerHTML = (((progress * 100).toFixed()).toString() + "%");
                 }
-                
+
             }
 
             sH.Hash(password, options, callback);
@@ -229,7 +190,6 @@ crypto-js.min.js, scrypt.min.js, encryptionHandler.js and scryptHandler.js with 
                 spanScryptsynch.innerHTML +=
                     "<br/>The derived hash key do not match with the test (in synchronous mode)!";
             }
-            
 
 ```
 
