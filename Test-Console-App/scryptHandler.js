@@ -186,6 +186,17 @@ function scryptHandler() {
 
     }
 
+    this.SaltWithRegularString = function(password, plaintextSalt, options)
+    {
+        var hexSalt = CryptoJS.enc.Hex.stringify(CryptoJS.enc.Utf8.parse(plaintextSalt));
+        if (options == null) {
+            options = { "Salt": hexSalt };
+        } else {
+            options.Salt = hexSalt;
+        }
+        return that.Hash(password, options);
+    }
+
     this.GetOnlyHashInHexString = function (password, cO) {
 
         var options = {

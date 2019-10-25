@@ -161,6 +161,9 @@
                     "<br/>The derived hash key do not match with the test (in synchronous mode)!";
             }
 
+            var testHash = sH2.SaltWithRegularString("This_is_my_password!", "1");
+            spanScryptsynch.innerHTML +=
+                "<br/><br/>The derived password with a given string Salt is: " + testHash;
 
         </script>
 
