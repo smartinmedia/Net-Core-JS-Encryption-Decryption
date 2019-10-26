@@ -125,10 +125,10 @@ For hashing, you also have a function to compare a password with the hash. The h
 
 
 Now let's have a look at the Javascript part of encryption / decryption (have a look at the index.html) and usage of the Scrypt hashing of passwords.
-The encryption / decryption is synchronous and pretty straight forward. The Scrypt functionality can be used synchronous or asynchronous, which is a little bit more tricky. For ##asynchronous, you have to provide
-a callback function## with (error, progress, key). The progress is between 0 and 1. Check for "key" (that's our hash) to get the final key string containing
-also the salt and all the parameters. So, e. g. if(key){//Here is everything, when the Scrypt hash is ready}. If you ##omit the callback function##, then Scrypt runs
-##synchronously## and returns the key. So either, you run sH.Hash(password, options, callback);
+The encryption / decryption is synchronous and pretty straight forward. The Scrypt functionality can be used synchronous or asynchronous, which is a little bit more tricky. For **asynchronous, you have to provide
+a callback function** with (error, progress, key). The progress is between 0 and 1. Check for "key" (that's our hash) to get the final key string containing
+also the salt and all the parameters. So, e. g. if(key){//Here is everything, when the Scrypt hash is ready}. If you **omit the callback function**, then Scrypt runs
+**synchronously** and returns the key. So either, you run sH.Hash(password, options, callback);
 or you run var key = sH.Hash(password, options);
 As with C#, we also have a function to compare a password to the hash. So, when a user logs in and sends the password, you can compare
 the password against the hash/key. The comparison may look a little bit confusing. This time, the callback function, which you 
