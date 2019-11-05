@@ -42,6 +42,54 @@
         return decryptedText;
 
     }
+
+    this.getDerivedKey = function(passPhrase, options)
+    {
+        var cO = options;
+        //Encoding the Salt in from UTF8 to byte array
+        var Salt = CryptoJS.enc.Base64.parse(cO["Salt"]);
+        //Creating the Vector Key
+       
+        var DerivedKey;
+
+        //Creating the key in PBKDF2 format to be used during the decryption
+        if (cO["DerivationType"] == "scrypt") {
+            var sc = new scryptHandler();
+            DerivedKey = CryptoJS.enc.Hex.parse(sc.GetOnlyHashInHexString(passPhrase, cO));
+        } else {
+            var Pass = CryptoJS.enc.Utf8.parse(passPhrase);
+            DerivedKey =
+                CryptoJS.PBKDF2(Pass.toString(CryptoJS.enc.Utf8), Salt, { keySize: cO["KeySizeInBytes"] * 8 / 32, iterations: cO["DerivationIterations"] });
+        }
+        return DerivedKey;
+    }
+
+    /*
+     * First, get your derived key, then you can decrypt binary data to binary with this
+     *
+     */
+
+    this.decryptBinaryWithParameters = function (rawEncryptedData, DerivedKey, options) {
+
+        var cO = options;
+        //Encoding the Salt in from UTF8 to byte array
+        var Iv = CryptoJS.enc.Base64.parse(cO["AesRijndaelIv"]);
+        //Encoding the Password in from UTF8 to byte array
+
+        
+        //Enclosing the test to be decrypted in a CipherParams object as supported by the CryptoJS libarary
+        var cipherParams = CryptoJS.lib.CipherParams.create({
+            ciphertext: rawEncryptedData
+        });
+
+        //Decrypting the string contained in cipherParams using the PBKDF2 key
+        var decrypted = CryptoJS.AES.decrypt(cipherParams,
+            DerivedKey,
+            { mode: CryptoJS.mode.CBC, iv: Iv, padding: CryptoJS.pad.Pkcs7 });
+        //var decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
+
+        return decrypted;
+    }
     
     /*
      PasswordDerivationOptions (options):

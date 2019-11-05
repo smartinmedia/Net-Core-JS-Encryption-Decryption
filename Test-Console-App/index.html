@@ -34,6 +34,26 @@
             <br />
             <br />
         </p>
+        
+    <h1>Test for binary decryption with JS of C# encrypted file</h1>
+    <p>
+        <strong>Please load the file "cartman.enc" with the File dialog button.</strong>
+        This is a test of the "cartman.enc" file, which was encrypted with C#, will be correctly decrypted by JS.
+        To decrypt correctly, JS not only needs the password, but also the settings (for SALT, IV, etc), which
+        can be passed with a JSON: var jsonBinarySetting =
+        {"DerivationType":"scrypt","Salt":"36fa904885f19e78152aa73366c40cc6df86aa2de20dbc5072aee7a912bdf142","Cost":16384,"BlockSize":8,"Parallel":1,"KeySizeInBytes":32,"DerivationIterations":0,"AesRijndaelIv":"FWhL0yPPay662/9IoE0ICw==","CipherOutputText":null};
+        <br /><br />
+        <input type="file" id="fileOpen" />
+        <div id="result"></div>
+        <div id="fileOutput">File output: </div>
+        <br />
+        <strong><span id="output-binary"></span></strong>
+
+
+        <br />
+        <br />
+    </p>
+
         <h1>Test for hashing with Scrypt</h1>
         <p>
             There is also an implementation for Scrypt. Scrypt is a new(er) way to hash passwords more securely, if
@@ -53,18 +73,19 @@
             <br /><br />
             <strong><span id="outputScrypt-synch"></span></strong>
         </p>
-        <script type="text/javascript" src="./crypto-js.min.js"></script>
-        <script type="text/javascript" src="./scrypt.min.js"></script>
+        <script type="text/javascript" src="./js/ExternalJs/crypto-js.min.js"></script>
+        <script type="text/javascript" src="./js/ExternalJs/scrypt.min.js"></script>
 
-        <script type="text/javascript" src="./encryptionHandler.js"></script>
-        <script type="text/javascript" src="./scryptHandler.js"></script>
+        <script type="text/javascript" src="./js/encryptionHandler.js"></script>
+        <script type="text/javascript" src="./js/scryptHandler.js"></script>
         <script type="text/javascript">
 
             // Test AES
             // This is the ciphertext, which was encrypted by C# to check the interchangeability:
             //var encryptedBase64FromCSharp = '{"DerivationType": "scrypt","Salt": "MmTt71gekdK62HbCD2ZUUkYBwVpMB6aWzYGJg+eUvBM=","Cost": 16384,"BlockSize": 8,"Parallel": 1,"KeySizeInBytes": 32,"DerivationIterations": 0,"AesRijndaelIv": "eIUwJ0pzcnr1HmSIVX4Qhw==","CipherOutputText": "BBhxsgDxth1u03appq/WIlXV+wbhUm7CMLZ/NazdJRA="}';
             //var encryptedBase64FromCSharp ='{"DerivationType": "rfc","Salt": "ZPVKtxxU+ZOBcA5FMCGIrLCJhItZQr9xkhzw4GyXk1A=","Cost": 0,"BlockSize": 0,"Parallel": 0,"KeySizeInBytes": 32,"DerivationIterations": 10000,"AesRijndaelIv": "3aF7jwcjXiEkuPOn8oqK0g==","CipherOutputText": "rKn+tl0Y4xyPqtQ/kfz1yhgh0pckTHxhayLAPNF4vIA="}';
-            var encryptedBase64FromCSharp = '{"DerivationType": "scrypt", "Salt": "3a069e9126af66a839067f8a272081136d8ce63ed72176dc8a29973d2b15361f", "Cost": 16384, "BlockSize": 8, "Parallel": 1, "KeySizeInBytes": 32, "DerivationIterations": 0, "AesRijndaelIv": "NrCMq2XZ/woLCBq2haKPtQ==", "CipherOutputText": "8Llal3i445vIVWRIHsMQHdaJlpYoubcjmFczH0t7tEA="}';
+            var encryptedBase64FromCSharp =
+                '{"DerivationType": "scrypt", "Salt": "3a069e9126af66a839067f8a272081136d8ce63ed72176dc8a29973d2b15361f", "Cost": 16384, "BlockSize": 8, "Parallel": 1, "KeySizeInBytes": 32, "DerivationIterations": 0, "AesRijndaelIv": "NrCMq2XZ/woLCBq2haKPtQ==", "CipherOutputText": "8Llal3i445vIVWRIHsMQHdaJlpYoubcjmFczH0t7tEA="}';
             var passPhrase = "This_is_my_password!";
 
             var eH = new encryptionHandler();
@@ -83,17 +104,90 @@
             outputText += "<br>And now this was encrypted and decrypted again with JS: " + decryptedTextWithJs;
             spanEnc.innerHTML = outputText;
 
+            /*
+             * Test Binary Decryption
+             *
+             */
+
+            var jsonBinarySetting =
+                {"DerivationType":"scrypt","Salt":"36fa904885f19e78152aa73366c40cc6df86aa2de20dbc5072aee7a912bdf142","Cost":16384,"BlockSize":8,"Parallel":1,"KeySizeInBytes":32,"DerivationIterations":0,"AesRijndaelIv":"FWhL0yPPay662/9IoE0ICw==","CipherOutputText":null};
+
+            document.getElementById('fileOpen').addEventListener('change',
+                function() {
+
+                    var reader = new FileReader();
+                    reader.onload = function() {
+
+                        var arrayBuffer = this.result,
+                            array = new Uint8Array(arrayBuffer),
+                            binaryString = String.fromCharCode.apply(null, array);
+
+                        //console.log(binaryString);
+
+                    }
+                    reader.readAsArrayBuffer(this.files[0]);
+                    //var text = CryptoJS.enc.Hex.stringify(reader.result);
+                    //var text2 = buf2hex(reader.result);
+                    var encryptedDataAsWordArray = CryptoJS.lib.WordArray.create(reader.result);
+
+                    var derivedKey = eH.getDerivedKey("This_is_my_password!", jsonBinarySetting);
+                    var decrypted =
+                        eH.decryptBinaryWithParameters(encryptedDataAsWordArray, derivedKey, jsonBinarySetting);
+
+                    var base64String = CryptoJS.enc.Base64.stringify(decrypted);
+                    //var base64String = btoa(String.fromCharCode.apply(null, decrypted));
+                    var imgUrl = 'data:image/png;base64,' + base64String;
+                    var img = document.createElement("img");
+                    img.src = imgUrl;
+
+                    var ele = document.getElementById("output-binary");
+                    ele.appendChild(img);
+
+                    // var text3 = CryptoJS.SHA256(WordArray).toString();
+                    // document.getElementById("output-binary").innerHTML = text3;
+
+
+                },
+                false);
+
+            function buf2hex(buffer) { // buffer is an ArrayBuffer
+                return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2))
+                    .join('');
+            }
+
+            function arrayBufferToBase64(buffer) {
+                var binary = '';
+                var bytes = new Uint8Array(buffer);
+                var len = bytes.byteLength;
+                for (var i = 0; i < len; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return window.btoa(binary);
+            }
+
+            function base64ToArrayBuffer(base64) {
+                var binary_string = window.atob(base64);
+                var len = binary_string.length;
+                var bytes = new Uint8Array(len);
+                for (var i = 0; i < len; i++) {
+                    bytes[i] = binary_string.charCodeAt(i);
+                }
+                return bytes.buffer;
+            }
+
+
             //
             // Test Scrypt
             //
-            var outputText2 = "<br><br>Testing Scrypt<br> with password = 'This_is_my_password!' and salt = 'This_is_my_SALT!'";
+            var outputText2 =
+                "<br><br>Testing Scrypt<br> with password = 'This_is_my_password!' and salt = 'This_is_my_SALT!'";
             var password = "This_is_my_password!";
             var saltString = "This_is_my_SALT!";
 
             //SALT must be delivered as Hex!!
             var wr = CryptoJS.enc.Utf8.parse(saltString);
             var salt = CryptoJS.enc.Hex.stringify(wr);
-            
+
             var t0 = (new Date()).getTime(); //To measure time!
             /*
              You can add any of these options
@@ -109,11 +203,10 @@
             var sH = new scryptHandler();
 
             var options = { "salt": salt };
-            var callback = function (error, progress, key) {
+            var callback = function(error, progress, key) {
                 if (error) {
                     outputText2 += "There was an error: " + error;
-                }
-                else if (key) {
+                } else if (key) {
                     outputText2 += "<br/>The key string for password " + password + " is: " + key;
                     outputText2 += "<br/>It is compatible with C# as long as you leave maxThreads in C# at null";
                     outputText2 += "<br>Execution time: " + (((new Date()).getTime() - t0) / 1000) + ' seconds';
@@ -121,7 +214,7 @@
                     spanScrypt.innerHTML = outputText2;
                     sH.comparePasswordWithHash(password,
                         key,
-                        function (isTheSame) {
+                        function(isTheSame) {
                             if (isTheSame) {
 
                                 var spanScrypt = document.getElementById("outputScrypt");
@@ -136,22 +229,21 @@
                             }
                         });
 
-                }
-
-                else if (progress) {
+                } else if (progress) {
                     var spanProgress = document.getElementById("progress");
 
                     spanProgress.innerHTML = (((progress * 100).toFixed()).toString() + "%");
                 }
 
             }
-            
+
             sH.Hash(password, options, callback);
             var spanScryptsynch = document.getElementById("outputScrypt-synch");
-            
+
             var sH2 = new scryptHandler();
             var synchKey = sH2.Hash(passPhrase, options);
-            spanScryptsynch.innerHTML = "<br/><br/>You can also get the key synchronously without callback function: " +
+            spanScryptsynch.innerHTML =
+                "<br/><br/>You can also get the key synchronously without callback function: " +
                 synchKey;
             if (sH2.comparePasswordWithHash(passPhrase, synchKey)) {
                 spanScryptsynch.innerHTML +=
@@ -164,7 +256,6 @@
             var testHash = sH2.Hash("This_is_my_password!", { "Salt": eH.transformTextToHex("1") });
             spanScryptsynch.innerHTML +=
                 "<br/><br/>The derived password with a given string Salt is: " + testHash;
-                
         </script>
 
     </body>

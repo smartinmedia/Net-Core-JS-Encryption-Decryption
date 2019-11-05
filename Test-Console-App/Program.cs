@@ -6,6 +6,8 @@ using System.Text;
 using System.Threading;
 using CryptSharp.Utility;
 using Net_Core_JS_Encryption_Decryption;
+using Net_Core_JS_Encryption_Decryption.Helpers;
+using Newtonsoft.Json;
 
 
 namespace DotNet_Js_Encryption_Decryption
@@ -31,13 +33,26 @@ namespace DotNet_Js_Encryption_Decryption
 
 
             // Uses by default "Scrypt" as the Password Derivation method. If you want to change this, you have to set
-            // PasswordDerivationOptions (create an object of the class)
+            // EncryptionOptions (create an object of the class)
             var enc = EncryptionHandler.Encrypt(plainText, passPhrase);
             Console.WriteLine("Plaintext: 'This is my secret text' with password 'This_is_my_password!' results in ciphertext: " + enc);
 
             var dec3 = EncryptionHandler.Decrypt(enc, passPhrase);
             Console.WriteLine("And decrypting again: " + dec3);
             Console.WriteLine("Please start the index.html to see the same in Javascript. Encryption / Decryption run in both ways and can be interchanged between C# and JS!");
+
+            /*
+             * Testing binary encryption
+             *
+             */
+
+            var file = File.ReadAllBytes(@"cartman.png");
+            var enc2 = EncryptionHandler.BinaryEncryptWithStaticIv(file, "This_is_my_password!");
+            File.WriteAllBytes("cartman.enc", enc2.CipherOutput);
+            enc2.CipherOutput = null;
+            var enc3 = enc2.ConvertToCipherTextObject();
+            var json = JsonConvert.SerializeObject(enc3, Formatting.None);
+            File.WriteAllText("cartman-settings.txt", json);
 
             /*
              * Testing Scrypt 

@@ -15,7 +15,7 @@ namespace Net_Core_JS_Encryption_Decryption
             return ScryptEncoder(password, null, 16384, 8, 1, null, 32);
         }
 
-        public static byte[] GetOnlyHashBytes(byte[] password, PasswordDerivationOptions sO)
+        public static byte[] GetOnlyHashBytes(byte[] password, EncryptionOptions sO)
         {
             var bytes = SCrypt.ComputeDerivedKey(password, sO.Salt, sO.Cost, sO.BlockSize, sO.Parallel, null, sO.KeySizeInBytes);
             //return Convert.ToBase64String(bytes);
@@ -23,9 +23,17 @@ namespace Net_Core_JS_Encryption_Decryption
 
         }
 
-        public static byte[] GetOnlyHashBytes(byte[] password, CipherTextObject sO)
+        public static byte[] GetOnlyHashBytes(byte[] password, CipherResultText sO)
         {
             var bytes = SCrypt.ComputeDerivedKey(password, ScryptHandler.StringToByteArray(sO.Salt), sO.Cost, sO.BlockSize, sO.Parallel, null, sO.KeySizeInBytes);
+            //return Convert.ToBase64String(bytes);
+            return bytes;
+
+        }
+
+        public static byte[] GetOnlyHashBytes(byte[] password, CipherResult sO)
+        {
+            var bytes = SCrypt.ComputeDerivedKey(password, sO.Salt, sO.Cost, sO.BlockSize, sO.Parallel, null, sO.KeySizeInBytes);
             //return Convert.ToBase64String(bytes);
             return bytes;
 

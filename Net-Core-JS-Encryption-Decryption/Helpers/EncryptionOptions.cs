@@ -1,22 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Net_Core_JS_Encryption_Decryption
+﻿namespace Net_Core_JS_Encryption_Decryption.Helpers
 {
-    public class PasswordDerivationOptions
+    public class EncryptionOptions
     {
         public string DerivationType; // "rfc" or "scrypt"
         public byte[] Salt;
+        public byte[] RijndaelIv;
         public int Cost;
         public int BlockSize;
         public int Parallel;
         public int KeySizeInBytes; // In bytes, e. g. 32
         public int DerivationIterations; // ONly for Rfc2898, not Scrypt, should be 10,000 or above
 
-        public PasswordDerivationOptions(string type = "scrypt", byte[] salt = null, int cost = 16384, int blockSize = 8, int parallel = 1,
+        public EncryptionOptions(string type = "scrypt", byte[] salt = null, int cost = 16384, int blockSize = 8, int parallel = 1,
             int keySizeInBytes = 32, int derivationIterations = 10000)
         {
+            DerivationType = type;
             if (salt == null)
             {
                 Salt = PasswordGenerator.GetRandomByteArray(32);
@@ -24,8 +22,9 @@ namespace Net_Core_JS_Encryption_Decryption
 
             KeySizeInBytes = keySizeInBytes;
 
-            if (type == "scrypt")
+            if (type == null || type == "scrypt")
             {
+                DerivationType = "scrypt";
                 Cost = cost;
                 BlockSize = blockSize;
                 Parallel = parallel;
@@ -33,7 +32,7 @@ namespace Net_Core_JS_Encryption_Decryption
             else //in Case of rfc2898
             {
                 DerivationIterations = derivationIterations;
-                DerivationType = type;
+                
             }
 
 
