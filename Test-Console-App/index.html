@@ -110,7 +110,7 @@
              */
 
             var jsonBinarySetting =
-                {"DerivationType":"scrypt","Salt":"36fa904885f19e78152aa73366c40cc6df86aa2de20dbc5072aee7a912bdf142","Cost":16384,"BlockSize":8,"Parallel":1,"KeySizeInBytes":32,"DerivationIterations":0,"AesRijndaelIv":"FWhL0yPPay662/9IoE0ICw==","CipherOutputText":null};
+                {"DerivationType":"scrypt","Salt":"546869735f69735f6d795f73616c74","Cost":16384,"BlockSize":8,"Parallel":1,"KeySizeInBytes":32,"DerivationIterations":0,"AesRijndaelIv":"aXZfaXNfMTZfbG9uZ19fXw==","CipherOutputText":null};
 
             document.getElementById('fileOpen').addEventListener('change',
                 function() {
@@ -118,35 +118,40 @@
                     var reader = new FileReader();
                     reader.onload = function() {
 
-                        var arrayBuffer = this.result,
-                            array = new Uint8Array(arrayBuffer),
-                            binaryString = String.fromCharCode.apply(null, array);
+                        //var arrayBuffer = this.result;
+                        //array = new Uint8Array(arrayBuffer);
+                        //binaryString = String.fromCharCode.apply(null, array);
+                        //var text = CryptoJS.enc.Hex.stringify(reader.result);
+                        //var text2 = buf2hex(reader.result);
+                        var encryptedDataAsWordArray = CryptoJS.lib.WordArray.create(reader.result);
+
+                        var derivedKey = eH.getDerivedKey("This_is_my_password!", jsonBinarySetting);
+
+                        var t0 = performance.now();
+
+                        var decrypted =
+                            eH.decryptBinaryWithParameters(encryptedDataAsWordArray, derivedKey, jsonBinarySetting);
+
+                        var base64String = CryptoJS.enc.Base64.stringify(decrypted);
+                        var t1 = performance.now();
+                        var ele = document.getElementById("output-binary");
+                        ele.innerHTML = "Time for decrypting image of 383 KB: " + (t1 - t0) + " milliseconds! <br/>";
+
+
+                        //var base64String = btoa(String.fromCharCode.apply(null, decrypted));
+                        var imgUrl = 'data:image/png;base64,' + base64String;
+                        var img = document.createElement("img");
+                        img.src = imgUrl;
+
+                        ele.appendChild(img);
+
+
 
                         //console.log(binaryString);
 
                     }
                     reader.readAsArrayBuffer(this.files[0]);
-                    //var text = CryptoJS.enc.Hex.stringify(reader.result);
-                    //var text2 = buf2hex(reader.result);
-                    var encryptedDataAsWordArray = CryptoJS.lib.WordArray.create(reader.result);
-
-                    var derivedKey = eH.getDerivedKey("This_is_my_password!", jsonBinarySetting);
-                    var decrypted =
-                        eH.decryptBinaryWithParameters(encryptedDataAsWordArray, derivedKey, jsonBinarySetting);
-
-                    var base64String = CryptoJS.enc.Base64.stringify(decrypted);
-                    //var base64String = btoa(String.fromCharCode.apply(null, decrypted));
-                    var imgUrl = 'data:image/png;base64,' + base64String;
-                    var img = document.createElement("img");
-                    img.src = imgUrl;
-
-                    var ele = document.getElementById("output-binary");
-                    ele.appendChild(img);
-
-                    // var text3 = CryptoJS.SHA256(WordArray).toString();
-                    // document.getElementById("output-binary").innerHTML = text3;
-
-
+                    
                 },
                 false);
 

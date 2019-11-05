@@ -47,7 +47,9 @@ namespace DotNet_Js_Encryption_Decryption
              */
 
             var file = File.ReadAllBytes(@"cartman.png");
-            var enc2 = EncryptionHandler.BinaryEncryptWithStaticIv(file, "This_is_my_password!");
+            var iv = Encoding.ASCII.GetBytes("iv_is_16_long___"); // Usually, don't produce your own IVs!
+            var salt = Encoding.UTF8.GetBytes("This_is_my_salt"); // Usually, don't produce your own Salt!
+            var enc2 = EncryptionHandler.BinaryEncryptWithStaticIv(file, "This_is_my_password!", new EncryptionOptions("scrypt", salt, iv));
             File.WriteAllBytes("cartman.enc", enc2.CipherOutput);
             enc2.CipherOutput = null;
             var enc3 = enc2.ConvertToCipherTextObject();

@@ -1,5 +1,16 @@
 ﻿function encryptionHandler() {
+/*
+    var cryptoObj; // For window.crypto
+    var useWindowCrypto;
 
+    // First check, if Window.crypto is available.
+    if (typeof window.crypto != "undefined" || typeof window.msCrypto != "undefined") {
+        cryptoObj = window.crypto || window.msCrypto; // for IE 11
+        useWindowCrypto = true;
+    } else {
+        useWindowCrypto = false; // Use CryptoJS instead
+    }
+  */  
     this.decrypt = function (encryptedData, passPhrase) {
         var cO = JSON.parse(encryptedData);
 

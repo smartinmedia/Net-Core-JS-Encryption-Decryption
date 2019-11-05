@@ -77,7 +77,7 @@ namespace Net_Core_JS_Encryption_Decryption
             // so that the same Salt and IV values can be used when decrypting.  
             var myRijndael = new RijndaelManaged();
             myRijndael.BlockSize = 128;
-            if (eO == null || eO.RijndaelIv == null)
+            if (eO == null  || eO.RijndaelIv == null)
             {
                 eO = new EncryptionOptions();
                 myRijndael.IV = GenerateXBytesOfRandomEntropy(16); //IV must be 16 bytes / 128 bit
