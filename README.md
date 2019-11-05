@@ -138,6 +138,8 @@ Have a look at the "index.html". There is the entire test. You only need to incl
 <br/>
 crypto-js.min.js, scrypt.min.js, encryptionHandler.js and scryptHandler.js with your code.
 
+PS: Now also supporting decrypting C# encrypted files in JS! Please check out the new index.html. You only have to click on the button to load "cartman.enc" (C# encrypted cartman.png) to get it displayed via JS. Pretty cool!
+
 ```javascript
 	   // Test AES
             // This is the ciphertext, which was encrypted by C# to check the interchangeability:
