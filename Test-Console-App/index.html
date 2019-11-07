@@ -90,6 +90,11 @@
 
             var eH = new encryptionHandler();
 
+            var callback = function(decrypted) {
+                console.log("Using WebCrypto results in: " + decrypted);
+            }
+
+            eH.decryptWithWebCrypto(encryptedBase64FromCSharp, passPhrase).then(callback);
 
             var decryptedFromCSharp = eH.decrypt(encryptedBase64FromCSharp, passPhrase);
 
