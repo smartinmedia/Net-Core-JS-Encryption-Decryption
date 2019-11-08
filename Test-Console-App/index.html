@@ -87,27 +87,34 @@
             var encryptedBase64FromCSharp =
                 '{"DerivationType": "scrypt", "Salt": "3a069e9126af66a839067f8a272081136d8ce63ed72176dc8a29973d2b15361f", "Cost": 16384, "BlockSize": 8, "Parallel": 1, "KeySizeInBytes": 32, "DerivationIterations": 0, "AesRijndaelIv": "NrCMq2XZ/woLCBq2haKPtQ==", "CipherOutputText": "8Llal3i445vIVWRIHsMQHdaJlpYoubcjmFczH0t7tEA="}';
             var passPhrase = "This_is_my_password!";
-
+            var outputText;
+            var spanEnc = document.getElementById("output"); 
+            var ele = document.getElementById("output-binary");
             var eH = new encryptionHandler();
 
             var callback = function(decrypted) {
                 console.log("Using WebCrypto results in: " + decrypted);
             }
 
-            eH.decryptWithWebCrypto(encryptedBase64FromCSharp, passPhrase).then(callback);
+            eH.decrypt(encryptedBase64FromCSharp, passPhrase).then(callback);
 
-            var decryptedFromCSharp = eH.decrypt(encryptedBase64FromCSharp, passPhrase);
+            var decryptedFromCSharp;
 
-            var spanEnc = document.getElementById("output");
+            eH.decrypt(encryptedBase64FromCSharp, passPhrase).then(function (decrypted) {
+                decryptedFromCSharp = decrypted;
+                
+                outputText = "The decrypted text from C#: " + decrypted;
+                spanEnc.innerHTML = outputText;
+            });
 
-
-            var outputText = "The decrypted text from C#: " + decryptedFromCSharp;
-            spanEnc.innerHTML = outputText;
+            
             var encryptTextWithJs = eH.encrypt(decryptedFromCSharp, "This_is_my_password!");
 
-            var decryptedTextWithJs = eH.decrypt(encryptTextWithJs, "This_is_my_password!");
-            outputText += "<br>And now this was encrypted and decrypted again with JS: " + decryptedTextWithJs;
-            spanEnc.innerHTML = outputText;
+            eH.decrypt(encryptTextWithJs, "This_is_my_password!").then(function(decryptedTextWithJs) {
+                outputText += "<br>And now this was encrypted and decrypted again with JS: " + decryptedTextWithJs;
+                spanEnc.innerHTML = outputText;
+            });
+
 
             /*
              * Test Binary Decryption
@@ -134,22 +141,23 @@
 
                         var t0 = performance.now();
 
-                        var decrypted =
-                            eH.decryptBinaryWithParameters(encryptedDataAsWordArray, derivedKey, jsonBinarySetting);
-
-                        var base64String = CryptoJS.enc.Base64.stringify(decrypted);
-                        var t1 = performance.now();
-                        var ele = document.getElementById("output-binary");
-                        ele.innerHTML = "Time for decrypting image of 383 KB: " + (t1 - t0) + " milliseconds! <br/>";
+                        eH.decryptBinaryWithParameters(encryptedDataAsWordArray, derivedKey, jsonBinarySetting).then(function(decrypted) {
+                            var base64String = CryptoJS.enc.Base64.stringify(decrypted);
+                            var t1 = performance.now();
+                            
+                            ele.innerHTML = "Time for decrypting image of 383 KB: " + (t1 - t0) + " milliseconds! <br/>";
 
 
-                        //var base64String = btoa(String.fromCharCode.apply(null, decrypted));
-                        var imgUrl = 'data:image/png;base64,' + base64String;
-                        var img = document.createElement("img");
-                        img.src = imgUrl;
+                            //var base64String = btoa(String.fromCharCode.apply(null, decrypted));
+                            var imgUrl = 'data:image/png;base64,' + base64String;
+                            var img = document.createElement("img");
+                            img.src = imgUrl;
 
-                        ele.appendChild(img);
+                            ele.appendChild(img);
 
+                        });
+
+                        
 
 
                         //console.log(binaryString);

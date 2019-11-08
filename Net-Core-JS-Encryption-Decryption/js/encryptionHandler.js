@@ -16,59 +16,49 @@
     
     this.decrypt = function (encryptedData, passPhrase) {
         var that = this;
-        return that.decryptWithCryptoJs(encryptedData, passPhrase);
+        if (useWindowCrypto) {
+            return that.decryptWithWebCrypto(encryptedData, passPhrase);
+        } else {
+            return that.decryptWithCryptoJs(encryptedData, passPhrase);
+        }
     }
+
+    this.encrypt = function(plainTextString, passPhrase) {
+
+    }
+
+    this.encryptBinary = function(plainTextArrayBuffer, passPhrase, options) {
+        if (options == null) { // Scrypt is default (not rfc)
+            options = {
+                "DerivationType": "scrypt",
+                "Salt": CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(32)), //(can be empty or null, then string is automatically created)
+                "Cost": 16384, //(the "N" of scrypt, default is 16384)
+                "BlockSize": 8, // (the "r", default is 8)
+                "Parallel": 1, // (the "p", default is 1)
+                "KeySizeInBytes": 32 // (default is 32)
+            }
+        }
+
+        // if one of the options exist, but others not
+        ('DerivationType' in options) || (options.DerivationType = "scrypt");
+        ('Salt' in options) || (options.Salt = CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(32)));
+        ('Cost' in options) || (options.Cost = 16384);
+        ('BlockSize' in options) || (options.BlockSize = 8);
+        ('Parallel' in options) || (options.Parallel = 1);
+        ('KeySizeInBytes' in options) || (options.KeySizeInBytes = 32);
+        ('DerivationIterations' in options) || (options.DerivationIterations = 10000);
+    }
+
 
     // Binary must be a UInt8Array!!
 
-    this.decryptBinary = function (rawEncryptedData, DerivedKey, options) {
+    this.decryptBinary = function (rawEncryptedData, derivedKey, options, returnUtf8Text = true) {
         var that = this;
-        return that.decryptBinaryWithCryptoJs(rawEncryptedData, DerivedKey, options);
-    }
-
-    this.decryptWithCryptoJs = function (encryptedData, passPhrase) {
-        var that = this;
-        var cO = JSON.parse(encryptedData);
-        var dKey = CryptoJS.enc.Hex.parse(that.getDerivedKey(passPhrase, cO)); //Is delivered in hex, so parse to CryptoJS
-        var decrypted = that.decryptBinaryWithCryptoJs(CryptoJS.enc.Base64.parse(cO.CipherOutputText), dKey, cO);
-        var decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
-        return decryptedText;
-    }
-
-    /*
-     * Decrypting with Window.Crypto.Subtle
-     */
-
-
-    function AES_CBC_encrypt() {
-        crypto.subtle.importKey("raw", keyData, "aes-cbc", false, ["encrypt"]).then(function (key) {
-            var plainText = document.getElementById("plainTextGCM").value;
-            return crypto.subtle.encrypt({ name: "aes-cbc", iv: iv }, key, asciiToUint8Array(plainText));
-        }, failAndLog).then(function (cipherText) {
-            document.getElementById("cipherTextGCM").value = bytesToHexString(cipherText);
-        }, failAndLog);
-    }
-
-    // return Utf8Text true = returns text, else returns binary
-    function AES_CBC_decrypt_binary(rawEncryptedData, derivedKey, options, returnUtf8Text = true) { 
-        return new Promise((resolve, reject) => {
-            var iv = _base64ToArrayBuffer(options.AesRijndaelIv);
-            crypto.subtle.importKey("raw", derivedKey, "aes-cbc", false, ["decrypt"])
-                .then(function(key) {
-                        return crypto.subtle.decrypt({ name: "aes-cbc", iv: iv }, key, rawEncryptedData);
-                    },
-                    reject)
-                .then(function (plainText) {
-                    if (returnUtf8Text) {
-                        resolve (new TextDecoder("utf-8").decode(plainText));
-                    } else {
-                        resolve(plainText);
-                    }
-                        
-                    },
-                    reject);
-        });
-
+        if (useWindowCrypto) {
+            return webcryptoBinaryDecrypt(rawEncryptedData, derivedKey, options, returnUtf8Text);
+        } else {
+            return cryptojsBinaryDecrypt(rawEncryptedData, derivedKey, options, returnUtf8Text);
+        }
     }
 
 
@@ -76,41 +66,26 @@
         var that = this;
         var cO = JSON.parse(encryptedData);
         var ciphertext = _base64ToArrayBuffer(cO.CipherOutputText);
-        var dKey = hexStringToUint8Array(that.getDerivedKey(passPhrase, cO)); //This key is in PBKDF2
-        var callback = function(plainText) {
-            console.log("Result: " + new TextDecoder("utf-8").decode(plainText));
+        var dKey;
+        if (cO["DerivationType"] == "scrypt") {
+            dKey = hexStringToUint8Array(that.getDerivedKey(passPhrase, cO)); //This key is in PBKDF2
+        } else {
+            var Salt = CryptoJS.enc.Hex.parse(cO.Salt);
+            var Pass = CryptoJS.enc.Utf8.parse(passPhrase);
+            DerivedKey =
+                CryptoJS.PBKDF2(Pass.toString(CryptoJS.enc.Utf8), Salt, { keySize: cO["KeySizeInBytes"] * 8 / 32, iterations: cO["DerivationIterations"] });
         }
-        return AES_CBC_decrypt_binary(ciphertext, dKey, cO); 
-        
+        return webcryptoBinaryDecrypt(ciphertext, dKey, cO, true); 
+      
     }
 
-    // Returns array buffer
-
-    this.decryptBinaryWithWebCrypto = function(rawEncryptedData, derivedKey, options) {
-        return AES_CBC_decrypt_binary(rawEncryptedData, derivedKey, options, false);
+    this.decryptWithCryptoJs = function(encryptedData, passPhrase) {
+        var that = this;
+        var cO = JSON.parse(encryptedData);
+        var dKey = CryptoJS.enc.Hex.parse(that.getDerivedKey(passPhrase, cO)); //Is delivered in hex, so parse to CryptoJS
+        return cryptojsBinaryDecrypt(CryptoJS.enc.Base64.parse(cO.CipherOutputText), dKey, cO, true); //returns Promise with text, not binary
     }
-
-    // Returns word array
-
-    this.decryptBinaryWithCryptoJs = function (rawEncryptedData, DerivedKey, options)
-    {
-        var cO = options;
-        //Encoding the Salt in from UTF8 to byte array
-        var Iv = CryptoJS.enc.Base64.parse(cO["AesRijndaelIv"]);
-        //Encoding the Password in from UTF8 to byte array
-        //Enclosing the test to be decrypted in a CipherParams object as supported by the CryptoJS libarary
-        var cipherParams = CryptoJS.lib.CipherParams.create({
-            ciphertext: rawEncryptedData
-        });
-        //Decrypting the string contained in cipherParams using the PBKDF2 key
-        var decrypted = CryptoJS.AES.decrypt(cipherParams,
-            DerivedKey,
-            { mode: CryptoJS.mode.CBC, iv: Iv, padding: CryptoJS.pad.Pkcs7 });
-        //var decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
-
-        return decrypted;
-    }
-
+  
 
     // Returns PBKDF2 key
     this.getDerivedKey = function(passPhrase, options)
@@ -134,6 +109,72 @@
         return DerivedKey;
     }
 
+
+    // return Utf8Text true = returns text, else returns binary
+    function webcryptoBinaryDecrypt(rawEncryptedData, derivedKey, options, returnUtf8Text = true) {
+        return new Promise(function (resolve, reject) {
+            var iv = _base64ToArrayBuffer(options.AesRijndaelIv);
+            crypto.subtle.importKey("raw", derivedKey, "aes-cbc", false, ["decrypt"])
+                .then(function (key) {
+                    return crypto.subtle.decrypt({ name: "aes-cbc", iv: iv }, key, rawEncryptedData);
+                },
+                    reject)
+                .then(function (plainText) {
+                    if (returnUtf8Text) {
+                        resolve(new TextDecoder("utf-8").decode(plainText));
+                    } else {
+                        resolve(plainText);
+                    }
+
+                },
+                    reject);
+        });
+
+    }
+
+    // return Utf8Text true = returns text, else returns binary
+    function cryptojsBinaryDecrypt(rawEncryptedData, derivedKey, options, returnUtf8Text = true) {
+        return new Promise(function (resolve, reject) {
+
+            var iv = CryptoJS.enc.Base64.parse(options["AesRijndaelIv"]);
+            //Encoding the Password in from UTF8 to byte array
+            //Enclosing the test to be decrypted in a CipherParams object as supported by the CryptoJS libarary
+            var cipherParams = CryptoJS.lib.CipherParams.create({
+                ciphertext: rawEncryptedData
+            });
+            //Decrypting the string contained in cipherParams using the PBKDF2 key
+            var decrypted = CryptoJS.AES.decrypt(cipherParams,
+                derivedKey,
+                { mode: CryptoJS.mode.CBC, iv: iv, padding: CryptoJS.pad.Pkcs7 });
+            //var decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
+
+            if (returnUtf8Text) {
+                resolve(decrypted.toString(CryptoJS.enc.Utf8));
+            } else {
+                resolve(decrypted);
+            }
+
+            var iv = _base64ToArrayBuffer(options.AesRijndaelIv);
+            crypto.subtle.importKey("raw", derivedKey, "aes-cbc", false, ["decrypt"])
+                .then(function (key) {
+                    return crypto.subtle.decrypt({ name: "aes-cbc", iv: iv }, key, rawEncryptedData);
+                },
+                    reject)
+                .then(function (plainText) {
+                    if (returnUtf8Text) {
+                        resolve(new TextDecoder("utf-8").decode(plainText));
+                    } else {
+                        resolve(plainText);
+                    }
+
+                },
+                    reject);
+        });
+
+    }
+
+
+
     /*
      * First, get your derived key, then you can decrypt binary data to binary with this
      *
@@ -156,58 +197,116 @@
         */
      
 
+    // returnBase64 = true => returns base64, else returns binary// raw
+    function cryptojsBinaryEncrypt(rawPlainData, derivedKey, options, returnBase64 = true) {
+        return new Promise(function (resolve, reject) {
+            //Creating the Vector Key
+            var Iv = CryptoJS.lib.WordArray.random(16);
+            options.AesRijndaelIv = CryptoJS.enc.Base64.stringify(Iv);
+            var key;
+            var encrypted = CryptoJS.AES.encrypt(rawPlainData, derivedKey,
+                { mode: CryptoJS.mode.CBC, iv: CryptoJS.enc.Base64.parse(options.AesRijndaelIv) });
+            //options.CipherOutputText = CryptoJS.enc.Base64.stringify(encrypted.ciphertext);
+            if (returnBase64) {
+                resolve(CryptoJS.enc.Base64.stringify(encrypted.ciphertext));
+            } else {
+                resolve(encrypted.ciphertext);
+            }
+       });
+    }
+
+
+
+    // Send rawPlainData in Uint8Array!
+    function webcryptoBinaryEncrypt(rawPlainData, derivedKey, options, returnBase64 = true) {
+        return new Promise(function (resolve, reject) {
+            var iv = _base64ToArrayBuffer(options.AesRijndaelIv);
+            crypto.subtle.importKey("raw", derivedKey, "aes-cbc", false, ["encrypt"])
+                .then(function (key) {
+                        return crypto.subtle.encrypt({ name: "aes-cbc", iv: iv }, key, rawPlainData);
+                    },
+                    reject)
+                .then(function (cipherText) {
+                        if (returnBase64) {
+                            resolve(_arrayBufferToBase64(cipherText));
+                        } else {
+                            resolve(cipherText);
+                        }
+                    },
+                    reject);
+        });
+    }
+
+
     this.encrypt = function (plainText, passPhrase, options) {
+        var derivedKey;
+        var that = this;
+        var rijndaelIv;
+        var salt;
+        if (useWindowCrypto) {
+            var array1 = new Uint8Array(32);
+            var array2 = new Uint8Array(32);
+            rijndaelIv = _arrayBufferToBase64(window.crypto.getRandomValues(array1));
+            salt = arrayBufferToHex(window.crypto.getRandomValues(array2));
+        } else {
+            rijndaelIv = CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(32));
+            salt = CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(32));
+        }
 
         if (options == null) { // Scrypt is default (not rfc)
             options = {
                 "DerivationType" : "scrypt",
-                "Salt": CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(32)), //(can be empty or null, then string is automatically created)
+                "Salt": salt, //(can be empty or null, then string is automatically created)
                 "Cost": 16384, //(the "N" of scrypt, default is 16384)
                 "BlockSize": 8, // (the "r", default is 8)
                 "Parallel": 1, // (the "p", default is 1)
-                "KeySizeInBytes": 32 // (default is 32)
+                "KeySizeInBytes": 32 // (default is 32),
+                "AesRijndaelIv" : rijndaelIv
             }
         }
-
-
+        
         // if one of the options exist, but others not
         ('DerivationType' in options) || (options.DerivationType = "scrypt");
-        ('Salt' in options) || (options.Salt = CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(32)));
+        ('Salt' in options) || (options.Salt = salt);
         ('Cost' in options) || (options.Cost = 16384);
         ('BlockSize' in options) || (options.BlockSize = 8);
         ('Parallel' in options) || (options.Parallel = 1);
         ('KeySizeInBytes' in options) || (options.KeySizeInBytes = 32);
         ('DerivationIterations' in options) || (options.DerivationIterations = 10000);
+        ('AesRijndaelIv' in options) || (options.AesRijndaelIv = rijndaelIv);
 
-
-        //Encoding the Salt from Hex
-        var Salt = CryptoJS.enc.Hex.parse(options.Salt);
-        //Creating the Vector Key
-        var Iv = CryptoJS.lib.WordArray.random(16);
-        options.AesRijndaelIv = CryptoJS.enc.Base64.stringify(Iv);
 
         var key;
-        if (options.DerivationType == "scrypt") {
-            var sc = new scryptHandler();
-            key = CryptoJS.enc.Hex.parse(sc.GetOnlyHashInHexString(passPhrase, options));
-             
-        } else { // DerivationType = "rfc"
-            //Encoding the Password in from UTF8 to byte array
-            Pass = CryptoJS.enc.Utf8.parse(passPhrase);
-            key =
-                CryptoJS.PBKDF2(Pass.toString(CryptoJS.enc.Utf8), Salt, { keySize: options.KeySizeInBytes * 8 / 32, iterations: options.DerivationIterations });
+        if (useWindowCrypto) {
+            var rawPlainData = encodeUTF8(plainText);
+            if (options.DerivationType == "scrypt") {
+                derivedKey = hexStringToUint8Array(that.getDerivedKey(passPhrase, options)); //This key is in PBKDF;
+            } else { // DerivationType = "rfc"
+                //Encoding the Password in from UTF8 to byte array
+                Pass = CryptoJS.enc.Utf8.parse(passPhrase);
+                derivedKey =
+                    CryptoJS.PBKDF2(Pass.toString(CryptoJS.enc.Utf8), Salt, { keySize: options.KeySizeInBytes * 8 / 32, iterations: options.DerivationIterations });
+            }
 
+            return webcryptoBinaryEncrypt(rawPlainData, derivedKey, options, true);
+
+        } else { // use CryptoJS
+            //Creating the Vector Key
+            iv = CryptoJS.enc.Base64.parse(options.AesRijndaelIv);
+            if (options.DerivationType == "scrypt") {
+                derivedKey = CryptoJS.enc.Hex.parse(that.GetOnlyHashInHexString(passPhrase, options));
+
+            } else { // DerivationType = "rfc"
+                //Encoding the Password in from UTF8 to byte array
+                Pass = CryptoJS.enc.Utf8.parse(passPhrase);
+                salt = CryptoJS.enc.Hex.parse(options.Salt);
+                derivedKey =
+                    CryptoJS.PBKDF2(Pass.toString(CryptoJS.enc.Utf8), salt, { keySize: options.KeySizeInBytes * 8 / 32, iterations: options.DerivationIterations });
+            }
+            var rawPlainData = CryptoJS.enc.Utf8.parse(plainText);
+            return cryptojsBinaryEncrypt(rawPlainData, derivedKey, options, true);
         }
 
-        //Creating the key in PBKDF2 format to be used during the decryption
-        
-        //Decrypting the string contained in cipherParams using the PBKDF2 key
-        var encrypted = CryptoJS.AES.encrypt(plainText,
-            key,
-            { mode: CryptoJS.mode.CBC, iv: Iv});
-
-        options.CipherOutputText = CryptoJS.enc.Base64.stringify(encrypted.ciphertext);
-        return JSON.stringify(options);
     }
 
     this.transformTextToHex = function(text) {
