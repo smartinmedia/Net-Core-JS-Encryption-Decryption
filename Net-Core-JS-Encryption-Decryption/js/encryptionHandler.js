@@ -16,40 +16,35 @@
     
     this.decrypt = function (encryptedData, passPhrase) {
         var that = this;
+        var cO = JSON.parse(encryptedData);
+        var dKey;
+
         if (useWindowCrypto) {
-            return that.decryptWithWebCrypto(encryptedData, passPhrase);
+                var ciphertext = _base64ToArrayBuffer(cO.CipherOutputText);
+                if (cO["DerivationType"] == "scrypt") {
+                    dKey = hexStringToUint8Array(that.getDerivedKey(passPhrase, cO)); //This key is in PBKDF2
+                } else {
+                    var Salt = CryptoJS.enc.Hex.parse(cO.Salt);
+                    var Pass = CryptoJS.enc.Utf8.parse(passPhrase);
+                    dKey =
+                        CryptoJS.PBKDF2(Pass.toString(CryptoJS.enc.Utf8), Salt, { keySize: cO["KeySizeInBytes"] * 8 / 32, iterations: cO["DerivationIterations"] });
+                }
+                return webcryptoBinaryDecrypt(ciphertext, dKey, cO, true);
+
         } else {
-            return that.decryptWithCryptoJs(encryptedData, passPhrase);
-        }
-    }
-
-    this.encrypt = function(plainTextString, passPhrase) {
-
-    }
-
-    this.encryptBinary = function(plainTextArrayBuffer, passPhrase, options) {
-        if (options == null) { // Scrypt is default (not rfc)
-            options = {
-                "DerivationType": "scrypt",
-                "Salt": CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(32)), //(can be empty or null, then string is automatically created)
-                "Cost": 16384, //(the "N" of scrypt, default is 16384)
-                "BlockSize": 8, // (the "r", default is 8)
-                "Parallel": 1, // (the "p", default is 1)
-                "KeySizeInBytes": 32 // (default is 32)
+            if (cO["DerivationType"] == "scrypt") {
+                dKey = CryptoJS.enc.Hex.parse(that.getDerivedKey(passPhrase, cO)); //Is delivered in hex, so parse to CryptoJS            } else {
+            } else {
+                var Salt = CryptoJS.enc.Hex.parse(cO.Salt);
+                var Pass = CryptoJS.enc.Utf8.parse(passPhrase);
+                dKey = CryptoJS.PBKDF2(Pass.toString(CryptoJS.enc.Utf8), Salt, { keySize: cO["KeySizeInBytes"] * 8 / 32, iterations: cO["DerivationIterations"] });
             }
+            return cryptojsBinaryDecrypt(CryptoJS.enc.Base64.parse(cO.CipherOutputText), dKey, cO, true); //returns Promise with text, not binary
         }
-
-        // if one of the options exist, but others not
-        ('DerivationType' in options) || (options.DerivationType = "scrypt");
-        ('Salt' in options) || (options.Salt = CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(32)));
-        ('Cost' in options) || (options.Cost = 16384);
-        ('BlockSize' in options) || (options.BlockSize = 8);
-        ('Parallel' in options) || (options.Parallel = 1);
-        ('KeySizeInBytes' in options) || (options.KeySizeInBytes = 32);
-        ('DerivationIterations' in options) || (options.DerivationIterations = 10000);
+        
     }
 
-
+    
     // Binary must be a UInt8Array!!
 
     this.decryptBinary = function (rawEncryptedData, derivedKey, options, returnUtf8Text = true) {
@@ -62,31 +57,7 @@
     }
 
 
-    this.decryptWithWebCrypto = function(encryptedData, passPhrase) {
-        var that = this;
-        var cO = JSON.parse(encryptedData);
-        var ciphertext = _base64ToArrayBuffer(cO.CipherOutputText);
-        var dKey;
-        if (cO["DerivationType"] == "scrypt") {
-            dKey = hexStringToUint8Array(that.getDerivedKey(passPhrase, cO)); //This key is in PBKDF2
-        } else {
-            var Salt = CryptoJS.enc.Hex.parse(cO.Salt);
-            var Pass = CryptoJS.enc.Utf8.parse(passPhrase);
-            DerivedKey =
-                CryptoJS.PBKDF2(Pass.toString(CryptoJS.enc.Utf8), Salt, { keySize: cO["KeySizeInBytes"] * 8 / 32, iterations: cO["DerivationIterations"] });
-        }
-        return webcryptoBinaryDecrypt(ciphertext, dKey, cO, true); 
-      
-    }
-
-    this.decryptWithCryptoJs = function(encryptedData, passPhrase) {
-        var that = this;
-        var cO = JSON.parse(encryptedData);
-        var dKey = CryptoJS.enc.Hex.parse(that.getDerivedKey(passPhrase, cO)); //Is delivered in hex, so parse to CryptoJS
-        return cryptojsBinaryDecrypt(CryptoJS.enc.Base64.parse(cO.CipherOutputText), dKey, cO, true); //returns Promise with text, not binary
-    }
-  
-
+    
     // Returns PBKDF2 key
     this.getDerivedKey = function(passPhrase, options)
     {
@@ -237,46 +208,63 @@
         });
     }
 
-
-    this.encrypt = function (plainText, passPhrase, options) {
-        var derivedKey;
-        var that = this;
+    function autocompleteOptions(options) {
         var rijndaelIv;
         var salt;
-        if (useWindowCrypto) {
-            var array1 = new Uint8Array(32);
-            var array2 = new Uint8Array(32);
-            rijndaelIv = _arrayBufferToBase64(window.crypto.getRandomValues(array1));
-            salt = arrayBufferToHex(window.crypto.getRandomValues(array2));
-        } else {
-            rijndaelIv = CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(32));
-            salt = CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(32));
+        if (options == null || options.AesRijndaelIv == null || options.Salt == null) {
+            if (useWindowCrypto) {
+                var array1 = new Uint8Array(32);
+                var array2 = new Uint8Array(32);
+                rijndaelIv = _arrayBufferToBase64(window.crypto.getRandomValues(array1));
+                salt = arrayBufferToHex(window.crypto.getRandomValues(array2));
+            } else {
+                rijndaelIv = CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(32));
+                salt = CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(32));
+            }
+
         }
+        
 
         if (options == null) { // Scrypt is default (not rfc)
             options = {
-                "DerivationType" : "scrypt",
+                "DerivationType": "scrypt",
                 "Salt": salt, //(can be empty or null, then string is automatically created)
                 "Cost": 16384, //(the "N" of scrypt, default is 16384)
                 "BlockSize": 8, // (the "r", default is 8)
                 "Parallel": 1, // (the "p", default is 1)
-                "KeySizeInBytes": 32 // (default is 32),
-                "AesRijndaelIv" : rijndaelIv
+                "KeySizeInBytes": 32, // (default is 32),
+                "AesRijndaelIv": rijndaelIv
             }
+        } else {
+            // if one of the options exist, but others not
+            ('DerivationType' in options) || (options.DerivationType = "scrypt");
+            ('Salt' in options) || (options.Salt = salt);
+            ('Cost' in options) || (options.Cost = 16384);
+            ('BlockSize' in options) || (options.BlockSize = 8);
+            ('Parallel' in options) || (options.Parallel = 1);
+            ('KeySizeInBytes' in options) || (options.KeySizeInBytes = 32);
+            ('DerivationIterations' in options) || (options.DerivationIterations = 10000);
+            ('AesRijndaelIv' in options) || (options.AesRijndaelIv = rijndaelIv);
         }
+
         
-        // if one of the options exist, but others not
-        ('DerivationType' in options) || (options.DerivationType = "scrypt");
-        ('Salt' in options) || (options.Salt = salt);
-        ('Cost' in options) || (options.Cost = 16384);
-        ('BlockSize' in options) || (options.BlockSize = 8);
-        ('Parallel' in options) || (options.Parallel = 1);
-        ('KeySizeInBytes' in options) || (options.KeySizeInBytes = 32);
-        ('DerivationIterations' in options) || (options.DerivationIterations = 10000);
-        ('AesRijndaelIv' in options) || (options.AesRijndaelIv = rijndaelIv);
+    }
+
+    this.encryptBinary = function (rawPlainData, derivedKey, options, returnBase64 = true) {
+        autocompleteOptions(options);
+        if (useWindowCrypto) {
+            return webcryptoBinaryEncrypt(rawPlainData, derivedKey, options, true);
+
+        } else { // use CryptoJS
+            return cryptojsBinaryEncrypt(rawPlainData, derivedKey, options, true);
+        }
+    }
 
 
-        var key;
+    this.encrypt = function (plainText, passPhrase, options) {
+        var derivedKey;
+        var that = this;
+        autocompleteOptions(options);
         if (useWindowCrypto) {
             var rawPlainData = encodeUTF8(plainText);
             if (options.DerivationType == "scrypt") {
@@ -285,17 +273,14 @@
                 //Encoding the Password in from UTF8 to byte array
                 Pass = CryptoJS.enc.Utf8.parse(passPhrase);
                 derivedKey =
-                    CryptoJS.PBKDF2(Pass.toString(CryptoJS.enc.Utf8), Salt, { keySize: options.KeySizeInBytes * 8 / 32, iterations: options.DerivationIterations });
+                    CryptoJS.PBKDF2(Pass.toString(CryptoJS.enc.Utf8), _base64ToArrayBuffer(options.Salt), { keySize: options.KeySizeInBytes * 8 / 32, iterations: options.DerivationIterations });
             }
 
             return webcryptoBinaryEncrypt(rawPlainData, derivedKey, options, true);
 
         } else { // use CryptoJS
-            //Creating the Vector Key
-            iv = CryptoJS.enc.Base64.parse(options.AesRijndaelIv);
             if (options.DerivationType == "scrypt") {
                 derivedKey = CryptoJS.enc.Hex.parse(that.GetOnlyHashInHexString(passPhrase, options));
-
             } else { // DerivationType = "rfc"
                 //Encoding the Password in from UTF8 to byte array
                 Pass = CryptoJS.enc.Utf8.parse(passPhrase);
