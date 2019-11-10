@@ -91,34 +91,34 @@
             var spanEnc = document.getElementById("output"); 
             var ele = document.getElementById("output-binary");
             var eH = new encryptionHandler();
-
-            var callback = function(decrypted) {
-                console.log("Using WebCrypto results in: " + decrypted);
-            }
-
-            eH.decrypt(encryptedBase64FromCSharp, passPhrase).then(callback);
-
             var decryptedFromCSharp;
+            var encryptTextWithJs;
 
             eH.decrypt(encryptedBase64FromCSharp, passPhrase).then(function (decrypted) {
                 decryptedFromCSharp = decrypted;
-                
                 outputText = "The decrypted text from C#: " + decrypted;
                 spanEnc.innerHTML = outputText;
-            });
+                return decrypted;
+            })
+                .then(function(decrypted) {
+                    encryptTextWithJs = eH.encrypt(decrypted, "This_is_my_password!");
+                    return encryptTextWithJs;
+                })
+                .then(function(encryptTextWithJs) {
+                    eH.decrypt(encryptTextWithJs, "This_is_my_password!").then(function(decryptedTextWithJs) {
+                        outputText += "<br>And now this was encrypted and decrypted again with JS: " + decryptedTextWithJs;
+                        spanEnc.innerHTML = outputText;
+                    });
+
+                });
 
             
-            var encryptTextWithJs = eH.encrypt(decryptedFromCSharp, "This_is_my_password!");
-
-            eH.decrypt(encryptTextWithJs, "This_is_my_password!").then(function(decryptedTextWithJs) {
-                outputText += "<br>And now this was encrypted and decrypted again with JS: " + decryptedTextWithJs;
-                spanEnc.innerHTML = outputText;
-            });
-
+            
+            
 
             /*
-             * Test Binary Decryption
-             *
+             * Test Binary Decryption of an image 
+             * and display it
              */
 
             var jsonBinarySetting =
@@ -135,14 +135,15 @@
                         //binaryString = String.fromCharCode.apply(null, array);
                         //var text = CryptoJS.enc.Hex.stringify(reader.result);
                         //var text2 = buf2hex(reader.result);
-                        var encryptedDataAsWordArray = CryptoJS.lib.WordArray.create(reader.result);
+                        var encryptedData = reader.result; //CryptoJS.lib.WordArray.create(reader.result);
 
                         var derivedKey = eH.getDerivedKey("This_is_my_password!", jsonBinarySetting);
 
                         var t0 = performance.now();
 
-                        eH.decryptBinaryWithParameters(encryptedDataAsWordArray, derivedKey, jsonBinarySetting).then(function(decrypted) {
-                            var base64String = CryptoJS.enc.Base64.stringify(decrypted);
+                        eH.decryptBinaryWithDerivedKey(encryptedData, derivedKey, jsonBinarySetting)
+                            .then(function (decrypted) {
+                            var base64String = _arrayBufferToBase64(decrypted);  //CryptoJS.enc.Base64.stringify(decrypted);
                             var t1 = performance.now();
                             
                             ele.innerHTML = "Time for decrypting image of 383 KB: " + (t1 - t0) + " milliseconds! <br/>";
@@ -168,30 +169,7 @@
                 },
                 false);
 
-            function buf2hex(buffer) { // buffer is an ArrayBuffer
-                return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2))
-                    .join('');
-            }
 
-            function arrayBufferToBase64(buffer) {
-                var binary = '';
-                var bytes = new Uint8Array(buffer);
-                var len = bytes.byteLength;
-                for (var i = 0; i < len; i++) {
-                    binary += String.fromCharCode(bytes[i]);
-                }
-                return window.btoa(binary);
-            }
-
-            function base64ToArrayBuffer(base64) {
-                var binary_string = window.atob(base64);
-                var len = binary_string.length;
-                var bytes = new Uint8Array(len);
-                for (var i = 0; i < len; i++) {
-                    bytes[i] = binary_string.charCodeAt(i);
-                }
-                return bytes.buffer;
-            }
 
 
             //
@@ -274,6 +252,17 @@
             var testHash = sH2.Hash("This_is_my_password!", { "Salt": eH.transformTextToHex("1") });
             spanScryptsynch.innerHTML +=
                 "<br/><br/>The derived password with a given string Salt is: " + testHash;
+
+            function _arrayBufferToBase64(buffer) {
+                var binary = '';
+                var bytes = new Uint8Array(buffer);
+                var len = bytes.byteLength;
+                for (var i = 0; i < len; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return window.btoa(binary);
+            }
+
         </script>
 
     </body>
