@@ -1,32 +1,11 @@
 ﻿function encryptionHandler() {
 
-    var cryptoObj; // For window.crypto
-    var useWindowCrypto;
-
-    // First check, if Window.crypto is available.
-    if (typeof window.crypto != "undefined" || typeof window.msCrypto != "undefined") {
-        window.crypto = window.crypto || window.msCrypto; //for IE11
-        if (window.crypto.webkitSubtle) {
-            window.crypto.subtle = window.crypto.webkitSubtle; //for Safari
-        }
-        useWindowCrypto = false;
-    } else {
-        useWindowCrypto = true; // Use CryptoJS instead
-    }
-    
     this.decrypt = function (encryptedData, passPhrase) {
         var that = this;
         var cO = JSON.parse(encryptedData);
         var dKey = that.getDerivedKey(passPhrase, cO); //This key is in PBKDF2
         var ciphertext = _base64ToArrayBuffer(cO.CipherOutputText);
-
-        if (useWindowCrypto) {
-            return webcryptoBinaryDecrypt(ciphertext, dKey, cO, true);
-
-        } else {
-            return cryptojsBinaryDecrypt(ciphertext, dKey, cO, true); //returns Promise with text, not binary
-        }
-        
+        return webcryptoBinaryDecrypt(ciphertext, dKey, cO, true);
     }
 
     
@@ -35,19 +14,11 @@
     this.decryptBinary = function (rawEncryptedData, passPhrase, options, returnUtf8Text = false) {
         var that = this;
         var derivedKey = that.getDerivedKey(passPhrase, options);
-        if (useWindowCrypto) {
-            return webcryptoBinaryDecrypt(rawEncryptedData, derivedKey, options, returnUtf8Text);
-        } else {
-            return cryptojsBinaryDecrypt(rawEncryptedData, derivedKey, options, returnUtf8Text);
-        }
+        return webcryptoBinaryDecrypt(rawEncryptedData, derivedKey, options, returnUtf8Text);
     }
 
     this.decryptBinaryWithDerivedKey = function (rawEncryptedData, derivedKey, options, returnUtf8Text = false) {
-        if (useWindowCrypto) {
-            return webcryptoBinaryDecrypt(rawEncryptedData, derivedKey, options, returnUtf8Text);
-        } else {
-            return cryptojsBinaryDecrypt(rawEncryptedData, derivedKey, options, returnUtf8Text);
-        }
+        return webcryptoBinaryDecrypt(rawEncryptedData, derivedKey, options, returnUtf8Text);
     }
 
     
@@ -59,7 +30,6 @@
         //Encoding the Salt in from UTF8 to byte array
         var Salt = CryptoJS.enc.Base64.parse(cO["Salt"]);
         //Creating the Vector Key
-       
         var DerivedKey;
 
         //Creating the key in PBKDF2 format to be used during the decryption
@@ -97,40 +67,12 @@
 
     }
 
-    // return Utf8Text true = returns text, else returns binary
-    function cryptojsBinaryDecrypt(rawEncryptedData, derivedKey, options, returnUtf8Text = true) {
-        return new Promise(function (resolve, reject) {
-            derivedKey = CryptoJS.lib.WordArray.create(derivedKey);
-            rawEncryptedData = CryptoJS.lib.WordArray.create(rawEncryptedData);
-            var iv = CryptoJS.enc.Base64.parse(options["AesRijndaelIv"]);
-            //Encoding the Password in from UTF8 to byte array
-            //Enclosing the test to be decrypted in a CipherParams object as supported by the CryptoJS libarary
-            var cipherParams = CryptoJS.lib.CipherParams.create({
-                ciphertext: rawEncryptedData
-            });
-            //Decrypting the string contained in cipherParams using the PBKDF2 key
-            var decrypted = CryptoJS.AES.decrypt(cipherParams, derivedKey,
-                { mode: CryptoJS.mode.CBC, iv: iv, padding: CryptoJS.pad.Pkcs7 });
-            //var decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
-
-            if (returnUtf8Text) {
-                resolve(decrypted.toString(CryptoJS.enc.Utf8));
-            } else {
-                resolve(wordArrayToByteArray(decrypted));
-            }
-        });
-
-    }
-
-
-
+  
     /*
      * First, get your derived key, then you can decrypt binary data to binary with this
      *
      */
 
-    
-    
     /*
      PasswordDerivationOptions (options):
      {
@@ -145,28 +87,6 @@
         }
         */
      
-
-    // returnBase64 = true => returns base64, else returns binary// raw
-    function cryptojsBinaryEncrypt(rawPlainData, derivedKey, options, returnFullCryptoObject = false) {
-        return new Promise(function (resolve, reject) {
-            //Creating the Vector Key
-            derivedKey = CryptoJS.lib.WordArray.create(derivedKey);
-            rawPlainData = CryptoJS.lib.WordArray.create(rawPlainData);
-            var Iv = CryptoJS.lib.WordArray.random(16);
-            options.AesRijndaelIv = CryptoJS.enc.Base64.stringify(Iv);
-            var encrypted = CryptoJS.AES.encrypt(rawPlainData, CryptoJS.lib.WordArray.create(derivedKey),
-                { mode: CryptoJS.mode.CBC, iv: CryptoJS.enc.Base64.parse(options.AesRijndaelIv) });
-            //options.CipherOutputText = CryptoJS.enc.Base64.stringify(encrypted.ciphertext);
-            if (returnFullCryptoObject) {
-                options.CipherOutputText = CryptoJS.enc.Base64.stringify(encrypted.ciphertext);
-                resolve(JSON.stringify(options));
-            } else {
-                resolve(wordArrayToByteArray(encrypted.ciphertext));
-            }
-       });
-    }
-
-
 
     // Send rawPlainData in Uint8Array!
     function webcryptoBinaryEncrypt(rawPlainData, derivedKey, options, returnFullCryptoObject = false) {
@@ -193,15 +113,11 @@
         var rijndaelIv;
         var salt;
         if (options == null || options.AesRijndaelIv == null || options.Salt == null) {
-            if (useWindowCrypto) {
-                var array1 = new Uint8Array(16);
-                var array2 = new Uint8Array(32);
-                rijndaelIv = _arrayBufferToBase64(window.crypto.getRandomValues(array1));
-                salt = arrayBufferToHex(window.crypto.getRandomValues(array2));
-            } else {
-                rijndaelIv = CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(16));
-                salt = CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.random(32));
-            }
+            var array1 = new Uint8Array(16);
+            var array2 = new Uint8Array(32);
+            rijndaelIv = _arrayBufferToBase64(window.crypto.getRandomValues(array1));
+            salt = arrayBufferToHex(window.crypto.getRandomValues(array2));
+        
         }
         if (options == null) { // Scrypt is default (not rfc)
             options = {
@@ -229,12 +145,7 @@
 
     this.encryptBinary = function (rawPlainData, derivedKey, options, returnFullCryptoObject = false) {
         options = autocompleteOptions(options);
-        if (useWindowCrypto) {
-            return webcryptoBinaryEncrypt(rawPlainData, derivedKey, options, returnFullCryptoObject);
-
-        } else { // use CryptoJS
-            return cryptojsBinaryEncrypt(rawPlainData, derivedKey, options, returnFullCryptoObject);
-        }
+        return webcryptoBinaryEncrypt(rawPlainData, derivedKey, options, returnFullCryptoObject);
     }
 
 
@@ -244,13 +155,8 @@
         var rawPlainData;
         options = autocompleteOptions(options);
         var derivedKey = that.getDerivedKey(passPhrase, options);
-        if (useWindowCrypto) {
-            rawPlainData = encodeUTF8(plainText);
-            return webcryptoBinaryEncrypt(rawPlainData, derivedKey, options, true);
-        } else { // use CryptoJS
-            rawPlainData = encodeUTF8(plainText);
-            return cryptojsBinaryEncrypt(rawPlainData, derivedKey, options, true);
-        }
+        rawPlainData = string2arraybuffer(plainText);
+        return webcryptoBinaryEncrypt(rawPlainData, derivedKey, options, true);
     }
 
     this.transformTextToHex = function(text) {
@@ -461,6 +367,17 @@
             i++;
         }
         return [].concat.apply([], result);
+    }
+    function arraybuffer2string(buf) {
+        return String.fromCharCode.apply(null, new Uint16Array(buf));
+    }
+    function string2arraybuffer(str) {
+        var buf = new ArrayBuffer(str.length * 2); // 2 bytes for each char
+        var bufView = new Uint16Array(buf);
+        for (var i = 0, strLen = str.length; i < strLen; i++) {
+            bufView[i] = str.charCodeAt(i);
+        }
+        return buf;
     }
 
 }
