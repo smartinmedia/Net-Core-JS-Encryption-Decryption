@@ -43,9 +43,11 @@
         can be passed with a JSON: var jsonBinarySetting =
         {"DerivationType":"scrypt","Salt":"36fa904885f19e78152aa73366c40cc6df86aa2de20dbc5072aee7a912bdf142","Cost":16384,"BlockSize":8,"Parallel":1,"KeySizeInBytes":32,"DerivationIterations":0,"AesRijndaelIv":"FWhL0yPPay662/9IoE0ICw==","CipherOutputText":null};
         <br /><br />
+        <p>Load file "cartman.enc" with button:</p>
         <input type="file" id="fileOpen" />
         <div id="result"></div>
-        <div id="fileOutput">File output: </div>
+        <div id="information">Information: </div>
+        <button id="clear">Clear image</button>
         <br />
         <strong><span id="output-binary"></span></strong>
 
@@ -75,12 +77,13 @@
         </p>
         <script type="text/javascript" src="./js/ExternalJs/crypto-js.min.js"></script>
         <script type="text/javascript" src="./js/ExternalJs/scrypt.min.js"></script>
-
+    
+        <script type="text/javascript" src="./js/common.js"></script>
         <script type="text/javascript" src="./js/encryptionHandler.js"></script>
         <script type="text/javascript" src="./js/scryptHandler.js"></script>
         <script type="text/javascript">
 
-            // Test AES
+            // Test Encryption / Decryption
             // This is the ciphertext, which was encrypted by C# to check the interchangeability:
             //var encryptedBase64FromCSharp = '{"DerivationType": "scrypt","Salt": "MmTt71gekdK62HbCD2ZUUkYBwVpMB6aWzYGJg+eUvBM=","Cost": 16384,"BlockSize": 8,"Parallel": 1,"KeySizeInBytes": 32,"DerivationIterations": 0,"AesRijndaelIv": "eIUwJ0pzcnr1HmSIVX4Qhw==","CipherOutputText": "BBhxsgDxth1u03appq/WIlXV+wbhUm7CMLZ/NazdJRA="}';
             //var encryptedBase64FromCSharp ='{"DerivationType": "rfc","Salt": "ZPVKtxxU+ZOBcA5FMCGIrLCJhItZQr9xkhzw4GyXk1A=","Cost": 0,"BlockSize": 0,"Parallel": 0,"KeySizeInBytes": 32,"DerivationIterations": 10000,"AesRijndaelIv": "3aF7jwcjXiEkuPOn8oqK0g==","CipherOutputText": "rKn+tl0Y4xyPqtQ/kfz1yhgh0pckTHxhayLAPNF4vIA="}';
@@ -112,65 +115,60 @@
 
                 });
 
-            
-            
-            
+
+            document.getElementById('clear').addEventListener('click',
+                function(evt) {
+                    var el = document.getElementById("cartmanimg");
+                    if (el) {
+                        el.parentNode.removeChild(el);
+
+                    }
+                
+                });
 
             /*
              * Test Binary Decryption of an image 
              * and display it
+             * To test it, load the file "cartman.enc". It should display cartman
              */
 
             var jsonBinarySetting =
                 {"DerivationType":"scrypt","Salt":"546869735f69735f6d795f73616c74","Cost":16384,"BlockSize":8,"Parallel":1,"KeySizeInBytes":32,"DerivationIterations":0,"AesRijndaelIv":"aXZfaXNfMTZfbG9uZ19fXw==","CipherOutputText":null};
 
             document.getElementById('fileOpen').addEventListener('change',
-                function() {
-
-                    var reader = new FileReader();
-                    reader.onload = function() {
-
-                        //var arrayBuffer = this.result;
-                        //array = new Uint8Array(arrayBuffer);
-                        //binaryString = String.fromCharCode.apply(null, array);
-                        //var text = CryptoJS.enc.Hex.stringify(reader.result);
-                        //var text2 = buf2hex(reader.result);
-                        var encryptedData = reader.result; //CryptoJS.lib.WordArray.create(reader.result);
-
-                        var derivedKey = eH.getDerivedKey("This_is_my_password!", jsonBinarySetting);
-
-                        var t0 = performance.now();
-
-                        eH.decryptBinaryWithDerivedKey(encryptedData, derivedKey, jsonBinarySetting)
-                            .then(function (decrypted) {
-                            var base64String = _arrayBufferToBase64(decrypted);  //CryptoJS.enc.Base64.stringify(decrypted);
-                            var t1 = performance.now();
-                            
-                            ele.innerHTML = "Time for decrypting image of 383 KB: " + (t1 - t0) + " milliseconds! <br/>";
-
-
-                            //var base64String = btoa(String.fromCharCode.apply(null, decrypted));
-                            var imgUrl = 'data:image/png;base64,' + base64String;
-                            var img = document.createElement("img");
-                            img.src = imgUrl;
-
-                            ele.appendChild(img);
-
-                        });
-
-                        
-
-
-                        //console.log(binaryString);
-
-                    }
-                    reader.readAsArrayBuffer(this.files[0]);
+                function (evt) {
                     
-                },
-                false);
+                    var file = evt.target.files[0],
+                        reader = new FileReader();
 
+                    reader.onload = function(e) {
+                        var data = e.target.result;
+                        var derivedKey = eH.getDerivedKey("This_is_my_password!", jsonBinarySetting);
+                        var t0 = performance.now();
+                        eH.decryptBinaryWithDerivedKey(data, derivedKey, jsonBinarySetting)
+                            .then(function(decrypted) {
+                                var t1 = performance.now();
+                                var feedback = document.getElementById("information");
+                                var response = 'Information: The encrypted data is ' +
+                                    decrypted.byteLength +
+                                    ' bytes long' +
+                                    "<br/>and action took: " +
+                                    (t1 - t0) +
+                                    " milliseconds."; // encrypted is an ArrayBuffer
+                                feedback.innerHTML = response;
 
+                                var base64String = _arrayBufferToBase64(decrypted);  //CryptoJS.enc.Base64.stringify(decrypted);
+                                var imgUrl = 'data:image/png;base64,' + base64String;
+                                var img = document.createElement("img");
+                                img.setAttribute("id", "cartmanimg");
+                                img.src = imgUrl;
+                                ele.appendChild(img);
+                            })
+                            .catch(console.error);
+                    }
 
+                    reader.readAsArrayBuffer(file);  
+                    });
 
             //
             // Test Scrypt
@@ -249,7 +247,7 @@
                     "<br/>The derived hash key do not match with the test (in synchronous mode)!";
             }
 
-            var testHash = sH2.Hash("This_is_my_password!", { "Salt": eH.transformTextToHex("1") });
+            var testHash = sH2.Hash("This_is_my_password!", { "Salt": transformTextToHex("1") });
             spanScryptsynch.innerHTML +=
                 "<br/><br/>The derived password with a given string Salt is: " + testHash;
 
