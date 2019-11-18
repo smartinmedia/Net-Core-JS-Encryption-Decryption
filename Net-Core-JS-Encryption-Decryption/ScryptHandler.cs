@@ -53,6 +53,46 @@ namespace Net_Core_JS_Encryption_Decryption
 
         }
 
+        public static string GetOnlyScryptSettingsAsString(EncryptionOptions eO)
+        {
+            string salt = String.Empty;
+            if (eO.Salt == null)
+            {
+                salt = "0";
+            }
+            else
+            {
+                salt = ByteArrayToString(eO.Salt);
+            }
+
+            return "scrypt2:" + eO.Cost.ToString() + ":" + eO.BlockSize.ToString() + ":" + eO.Parallel.ToString() + ":" + "0:" + eO.KeySizeInBytes.ToString()
+                   + ":" + salt + ":0";
+
+        }
+
+        public static EncryptionOptions GetEncryptionOptionsFromScryptSettings(string settings)
+        {
+            var eO = new EncryptionOptions();
+
+            var scryptArray = settings.Split(":");
+            if (scryptArray.Length < 8)
+            {
+                return null;
+            }
+            if (scryptArray[0] != "scrypt2")
+            {
+                return null;
+            }
+
+            eO.Salt = StringToByteArray(scryptArray[6]);
+            eO.Cost = Convert.ToInt32(scryptArray[1]);
+            eO.BlockSize = Convert.ToInt32(scryptArray[2]);
+            eO.Parallel = Convert.ToInt32(scryptArray[3]);
+            eO.KeySizeInBytes = Convert.ToInt32(scryptArray[5]);
+            return eO;
+        }
+
+
 
         public static string Hash(string password, string salt)
         {

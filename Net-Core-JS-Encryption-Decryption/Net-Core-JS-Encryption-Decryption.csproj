@@ -15,19 +15,22 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="js\common.js">
+    <None Update="js\encryptionDecryptionLibrary.min.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="js\ExternalJs\crypto-js.min.js">
+    <None Update="js\src\common.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="js\encryptionHandler.js">
+    <None Update="js\src\ExternalJs\crypto-js.min.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="js\ExternalJs\scrypt.min.js">
+    <None Update="js\src\encryptionHandler.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="js\scryptHandler.js">
+    <None Update="js\src\ExternalJs\scrypt.min.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="js\src\scryptHandler.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
