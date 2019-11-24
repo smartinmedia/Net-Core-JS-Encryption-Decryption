@@ -1,4 +1,6 @@
-﻿namespace Net_Core_JS_Encryption_Decryption.Helpers
+﻿using System;
+
+namespace Net_Core_JS_Encryption_Decryption.Helpers
 {
     public class EncryptionOptions
     {
@@ -43,6 +45,9 @@
 
 
         }
+
+
+
 
     }
 }

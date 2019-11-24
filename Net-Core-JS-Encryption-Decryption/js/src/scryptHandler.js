@@ -211,5 +211,23 @@ function scryptHandler() {
         return parts[7];
     }
 
+    this.GetEncryptionOptionsFromScryptSettings = function(scryptString) {
+        var parts = scryptString.split(":");
+        if (parts.size < 8) {
+            return false;
+        }
+        if (parts[0] !== "scrypt2") {
+            return false;
+        }
+        var options = {
+            "Cost": parseInt(parts[1]),
+            "BlockSize": parseInt(parts[2]),
+            "Parallel": parseInt(parts[3]),
+            "KeySizeInBytes": parseInt(parts[5]),
+            "Salt": parts[6]
+        };
+        return options;
+    }
+
 }
 

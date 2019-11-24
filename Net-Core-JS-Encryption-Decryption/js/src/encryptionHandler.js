@@ -81,7 +81,8 @@
     {
         var cO = options;
         //Encoding the Salt in from UTF8 to byte array
-        var Salt = CryptoJS.enc.Base64.parse(cO["Salt"]);
+        var Salt = new buffer.SlowBuffer(cO.Salt, 'hex');
+        //CryptoJS.enc.Base64.parse(cO["Salt"]);
         //Creating the Vector Key
         var DerivedKey;
 
