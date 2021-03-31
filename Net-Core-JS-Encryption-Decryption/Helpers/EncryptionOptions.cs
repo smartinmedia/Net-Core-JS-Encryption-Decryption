@@ -39,6 +39,7 @@ namespace Net_Core_JS_Encryption_Decryption.Helpers
             }
             else //in Case of rfc2898
             {
+                DerivationType = "pbkdf2";
                 DerivationIterations = derivationIterations;
 
             }

@@ -35,11 +35,22 @@ namespace DotNet_Js_Encryption_Decryption
             // Uses by default "Scrypt" as the Password Derivation method. If you want to change this, you have to set
             // EncryptionOptions (create an object of the class)
             var enc = EncryptionHandler.Encrypt(plainText, passPhrase);
+            Console.WriteLine("Encryption / Decryption with key derivation via SCRYPT");
             Console.WriteLine("Plaintext: 'This is my secret text' with password 'This_is_my_password!' results in ciphertext: " + enc);
 
             var dec3 = EncryptionHandler.Decrypt(enc, passPhrase);
             Console.WriteLine("And decrypting again: " + dec3);
+
+            Console.WriteLine("Encryption / Decryption with key derivation via PBKDF2");
+            var eO = new EncryptionOptions("pbkdf2");
+            var enc4 = EncryptionHandler.Encrypt(plainText, passPhrase, eO);
+            Console.WriteLine("Plaintext: 'This is my secret text' with password 'This_is_my_password!' results in ciphertext: " + enc4);
+
+
+            var dec4 = EncryptionHandler.Decrypt(enc4, passPhrase);
+            Console.WriteLine("And decrypting again: " + dec4);
             Console.WriteLine("Please start the index.html to see the same in Javascript. Encryption / Decryption run in both ways and can be interchanged between C# and JS!");
+
 
             /*
              * Testing binary encryption

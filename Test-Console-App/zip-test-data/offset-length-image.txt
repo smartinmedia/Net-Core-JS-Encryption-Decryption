@@ -1,0 +1,10 @@
+This regards the file test.zip
+
+bei einem http-range request würdest du "Range: bytes=1264-146929" angeben, weil das byte an position 146930 ja schon das erste byte vom nächsten Eintrag wäre.
+Pass: 3rQA6zJX-sQwHT4iA-GWDoYjXn-Cuow6uBp
+
+The range for the image is 1264 - 146929
+With AES head / authentication code: starts 18 bytes before and 10 bytes thereafter
+
+AES part:
+1246 - 146939

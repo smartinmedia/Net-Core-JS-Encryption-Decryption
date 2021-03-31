@@ -3,6 +3,10 @@
 
 
     /*
+
+    Excellent JS descriptioN:
+    https://dev.to/halan/4-ways-of-symmetric-cryptography-and-javascript-how-to-aes-with-javascript-3o1b
+
      PasswordDerivationOptions (options):
      {
         "DerivationType": "scrypt", // optionally: rfc
@@ -91,11 +95,29 @@
             var sc = new scryptHandler();
             DerivedKey = hexStringToUint8Array(sc.GetOnlyHashInHexString(passPhrase, cO));
         } else {
+            Salt = CryptoJS.enc.Hex.parse(cO.Salt);
             var Pass = CryptoJS.enc.Utf8.parse(passPhrase);
+            var pass2 = Pass.toString(CryptoJS.enc.Utf8);
             DerivedKey =
-                CryptoJS.PBKDF2(Pass.toString(CryptoJS.enc.Utf8), Salt, { keySize: cO["KeySizeInBytes"] * 8 / 32, iterations: cO["DerivationIterations"] });
+                CryptoJS.PBKDF2(pass2, Salt, { keySize: cO["KeySizeInBytes"] * 8 / 32, iterations: cO["DerivationIterations"] });
+            DerivedKey = CryptoJS.enc.Hex.stringify(DerivedKey);
+            DerivedKey = new buffer.SlowBuffer(DerivedKey, 'hex');
         }
         return DerivedKey;
+    }
+
+    this.decryptAesZipEntry = async function(zipFilePassword, encryptedDataInUint8Array){
+        var decHandle = new AESDecrypt(zipFilePassword, false, 3); // 3 = encryption strength. 3 = 256 Bits // true = signed --> check if correct encryption
+        var decryptedPart1 = await decHandle.append(encryptedDataInUint8Array);
+        const result = await decHandle.flush();
+        if (!result.valid) {
+            throw new Error("Error: The signature of the ZIP AES encryption is incorrect!");
+        }
+        var decryptedPart2 = result.data;
+        var decryptedCombined = new Uint8Array(decryptedPart1.length + decryptedPart2.length);
+        decryptedCombined.set(decryptedPart1);
+        decryptedCombined.set(decryptedPart2, decryptedPart1.length);
+        return decryptedCombined;
     }
 
 
