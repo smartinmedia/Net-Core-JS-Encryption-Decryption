@@ -106,7 +106,7 @@
         return DerivedKey;
     }
 
-    this.decryptAesZipEntry = async function(zipFilePassword, encryptedDataInUint8Array){
+    this.decryptAesZipEntry = async function(zipFilePassword, encryptedDataInUint8Array, isCompressed=false){
         var decHandle = new AESDecrypt(zipFilePassword, false, 3); // 3 = encryption strength. 3 = 256 Bits // true = signed --> check if correct encryption
         var decryptedPart1 = await decHandle.append(encryptedDataInUint8Array);
         const result = await decHandle.flush();
@@ -117,6 +117,18 @@
         var decryptedCombined = new Uint8Array(decryptedPart1.length + decryptedPart2.length);
         decryptedCombined.set(decryptedPart1);
         decryptedCombined.set(decryptedPart2, decryptedPart1.length);
+        if(isCompressed){
+            try{
+                let zipHandle = new ZipInflate();
+                let decompressed = await zipHandle.append(decryptedCombined);
+                await zipHandle.flush();
+                return decompressed;
+            }
+            catch(e){
+               throw new Error("Error: Could not decompress ZIP after decrypting: " + e.message);
+            }
+            
+        }
         return decryptedCombined;
     }
 
